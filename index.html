@@ -1,0 +1,1551 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>Entwine</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        :root {
+            --primary: #007AFF; --bg: #F2F2F7; --card: #FFFFFF;
+            --text: #000000; --text-secondary: #8E8E93; --text-tertiary: #C7C7CC;
+            --separator: #E5E5EA; --danger: #FF3B30; --success: #34C759; --warning: #FF9500;
+            --bubble-left: #E9E9EB; --bubble-right: #007AFF;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg); color: var(--text); overflow-x: hidden; max-width: 100vw;
+        }
+        #app { max-width: 430px; margin: 0 auto; min-height: 100vh; background: var(--bg); position: relative; }
+        #login-screen {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000;
+        }
+        .login-logo { font-size: 32px; font-weight: 600; margin-bottom: 40px; letter-spacing: 2px; }
+        .login-input-wrap { width: 280px; margin-bottom: 20px; }
+        .login-input {
+            width: 100%; padding: 16px 20px; border: 1px solid var(--separator);
+            border-radius: 12px; font-size: 17px; text-align: center; background: var(--card); outline: none;
+        }
+        .login-input:focus { border-color: var(--primary); }
+        .login-btn {
+            width: 280px; padding: 16px; background: var(--primary); color: white;
+            border: none; border-radius: 12px; font-size: 17px; font-weight: 500; cursor: pointer;
+        }
+        .login-btn:active { opacity: 0.8; }
+        .login-error { color: var(--danger); font-size: 14px; margin-top: 12px; display: none; }
+        #main-app { display: none; min-height: 100vh; padding-bottom: 80px; }
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; right: 0; max-width: 430px; margin: 0 auto;
+            background: rgba(255,255,255,0.95); backdrop-filter: blur(20px);
+            border-top: 0.5px solid var(--separator); display: flex; height: 64px; z-index: 100;
+        }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; color: var(--text-tertiary); }
+        .nav-item.active { color: var(--primary); }
+        .nav-icon { font-size: 22px; margin-bottom: 2px; }
+        .nav-label { font-size: 10px; font-weight: 500; }
+        .page { display: none; min-height: calc(100vh - 64px); background: var(--bg); }
+        .page.active { display: block; }
+        .page-header {
+            position: sticky; top: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(20px);
+            padding: 12px 16px; border-bottom: 0.5px solid var(--separator); z-index: 50;
+            display: flex; align-items: center; justify-content: center; height: 56px;
+        }
+        .page-header-title { font-size: 17px; font-weight: 600; }
+        .header-btn { position: absolute; right: 16px; font-size: 24px; color: var(--primary); cursor: pointer; background: none; border: none; }
+        .header-btn-left { position: absolute; left: 16px; font-size: 17px; color: var(--primary); cursor: pointer; background: none; border: none; }
+        .search-bar { padding: 8px 16px; background: var(--bg); }
+        .search-input {
+            width: 100%; padding: 10px 16px; border: none; border-radius: 10px;
+            background: var(--card); font-size: 15px; outline: none;
+        }
+        .list-item {
+            background: var(--card); padding: 12px 16px; display: flex; align-items: center;
+            border-bottom: 0.5px solid var(--separator); cursor: pointer;
+        }
+        .list-item:active { background: #F5F5F5; }
+        .list-avatar {
+            width: 48px; height: 48px; border-radius: 50%; background: var(--primary);
+            display: flex; align-items: center; justify-content: center; color: white;
+            font-size: 20px; margin-right: 12px; flex-shrink: 0;
+        }
+        .list-content { flex: 1; min-width: 0; }
+        .list-title { font-size: 16px; font-weight: 500; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .list-subtitle { font-size: 14px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .list-right { text-align: right; flex-shrink: 0; }
+        .list-time { font-size: 12px; color: var(--text-tertiary); margin-bottom: 4px; }
+        .badge {
+            display: inline-block; min-width: 18px; height: 18px; border-radius: 9px;
+            background: var(--danger); color: white; font-size: 12px; line-height: 18px; text-align: center; padding: 0 5px;
+        }
+        .section { margin-top: 20px; }
+        .section-header { padding: 8px 16px; font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+        .section-body { background: var(--card); border-radius: 12px; margin: 0 16px; overflow: hidden; }
+        .chat-page {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            max-width: 430px; margin: 0 auto; background: var(--bg); z-index: 200; flex-direction: column;
+        }
+        .chat-page.active { display: flex; }
+        .chat-header {
+            background: rgba(255,255,255,0.95); backdrop-filter: blur(20px); padding: 12px 16px;
+            border-bottom: 0.5px solid var(--separator); display: flex; align-items: center; height: 64px; flex-shrink: 0;
+        }
+        .chat-back { font-size: 24px; color: var(--primary); cursor: pointer; margin-right: 8px; }
+        .chat-peer-info { flex: 1; display: flex; align-items: center; }
+        .chat-peer-avatar {
+            width: 36px; height: 36px; border-radius: 50%; background: var(--primary);
+            display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; margin-right: 10px;
+        }
+        .chat-peer-name { font-size: 16px; font-weight: 500; }
+        .chat-peer-status { font-size: 12px; color: var(--text-secondary); }
+        .chat-more { font-size: 20px; color: var(--primary); cursor: pointer; padding: 4px 8px; }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+        .message-row { display: flex; align-items: flex-start; gap: 8px; }
+        .message-row.own { flex-direction: row-reverse; }
+        .message-avatar {
+            width: 36px; height: 36px; border-radius: 50%; background: var(--primary);
+            display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; flex-shrink: 0;
+        }
+        .message-content { max-width: 70%; display: flex; flex-direction: column; }
+        .message-bubble { padding: 10px 14px; border-radius: 18px; font-size: 16px; line-height: 1.4; word-break: break-word; }
+        .message-row:not(.own) .message-bubble { background: var(--bubble-left); border-bottom-left-radius: 4px; }
+        .message-row.own .message-bubble { background: var(--bubble-right); color: white; border-bottom-right-radius: 4px; }
+        .message-meta { font-size: 11px; color: var(--text-tertiary); margin-top: 4px; }
+        .message-row.own .message-meta { text-align: right; }
+        .message-quote {
+            font-size: 13px; color: var(--text-secondary); background: rgba(0,0,0,0.05);
+            padding: 6px 10px; border-radius: 8px; margin-bottom: 6px; border-left: 3px solid var(--text-tertiary);
+        }
+        .chat-input-area {
+            background: var(--card); border-top: 0.5px solid var(--separator);
+            padding: 8px 12px; padding-bottom: calc(8px + env(safe-area-inset-bottom)); flex-shrink: 0;
+        }
+        .chat-input-row { display: flex; align-items: flex-end; gap: 8px; }
+        .chat-plus-btn {
+            width: 36px; height: 36px; border-radius: 50%; background: var(--bg);
+            display: flex; align-items: center; justify-content: center; font-size: 24px;
+            color: var(--text-secondary); cursor: pointer; flex-shrink: 0;
+        }
+        .chat-input {
+            flex: 1; border: none; background: var(--bg); border-radius: 18px;
+            padding: 10px 16px; font-size: 16px; outline: none; max-height: 100px; resize: none;
+        }
+        .chat-send-btn {
+            padding: 8px 16px; background: var(--primary); color: white; border: none;
+            border-radius: 18px; font-size: 15px; font-weight: 500; cursor: pointer; flex-shrink: 0;
+        }
+        .chat-menu {
+            display: none; background: var(--card); border-top: 0.5px solid var(--separator);
+            padding: 16px; grid-template-columns: repeat(4, 1fr); gap: 16px;
+        }
+        .chat-menu.active { display: grid; }
+        .menu-item { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; }
+        .menu-icon {
+            width: 56px; height: 56px; border-radius: 12px; background: var(--bg);
+            display: flex; align-items: center; justify-content: center; font-size: 28px;
+        }
+        .menu-label { font-size: 12px; color: var(--text-secondary); }
+        .action-sheet {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4); z-index: 300; justify-content: center; align-items: flex-end;
+        }
+        .action-sheet.active { display: flex; }
+        .action-sheet-content {
+            width: 100%; max-width: 430px; background: var(--card);
+            border-radius: 16px 16px 0 0; overflow: hidden;
+        }
+        .action-sheet-item {
+            padding: 16px; text-align: center; font-size: 17px;
+            border-bottom: 0.5px solid var(--separator); cursor: pointer;
+        }
+        .action-sheet-item:active { background: #F5F5F5; }
+        .action-sheet-item.danger { color: var(--danger); }
+        .action-sheet-cancel {
+            padding: 16px; text-align: center; font-size: 17px; font-weight: 600;
+            border-top: 8px solid var(--bg); cursor: pointer;
+        }
+        .settings-group { margin: 20px 16px 0; background: var(--card); border-radius: 12px; overflow: hidden; }
+        .settings-item {
+            padding: 14px 16px; display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 0.5px solid var(--separator); cursor: pointer;
+        }
+        .settings-item:last-child { border-bottom: none; }
+        .settings-item:active { background: #F5F5F5; }
+        .settings-label { font-size: 16px; }
+        .settings-value { font-size: 15px; color: var(--text-secondary); }
+        .settings-arrow { color: var(--text-tertiary); font-size: 14px; }
+        .toggle {
+            width: 52px; height: 32px; border-radius: 16px; background: var(--separator);
+            position: relative; cursor: pointer; transition: background 0.3s;
+        }
+        .toggle.on { background: var(--success); }
+        .toggle-handle {
+            width: 28px; height: 28px; border-radius: 50%; background: white;
+            position: absolute; top: 2px; left: 2px; transition: transform 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .toggle.on .toggle-handle { transform: translateX(20px); }
+        .sub-page {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            max-width: 430px; margin: 0 auto; background: var(--bg); z-index: 150; flex-direction: column;
+        }
+        .sub-page.active { display: flex; }
+        .sub-page-header {
+            background: rgba(255,255,255,0.95); backdrop-filter: blur(20px); padding: 12px 16px;
+            border-bottom: 0.5px solid var(--separator); display: flex; align-items: center; height: 56px; flex-shrink: 0;
+        }
+        .sub-page-title { flex: 1; text-align: center; font-size: 17px; font-weight: 600; }
+        .sub-page-body { flex: 1; overflow-y: auto; padding: 16px; }
+        .card-item {
+            background: var(--card); border-radius: 12px; padding: 16px; margin-bottom: 12px;
+            display: flex; align-items: center; justify-content: space-between;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .card-text { font-size: 16px; flex: 1; }
+        .card-actions { display: flex; gap: 12px; }
+        .card-btn { font-size: 14px; color: var(--primary); cursor: pointer; padding: 4px 8px; }
+        .card-btn.danger { color: var(--danger); }
+        .input-area { background: var(--card); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+        .input-area textarea, .input-area input {
+            width: 100%; border: none; outline: none; font-size: 16px; background: transparent; resize: none;
+        }
+        .btn-primary {
+            width: 100%; padding: 14px; background: var(--primary); color: white;
+            border: none; border-radius: 12px; font-size: 17px; font-weight: 500; cursor: pointer; margin-top: 12px;
+        }
+        .btn-primary:active { opacity: 0.8; }
+        .btn-danger {
+            width: 100%; padding: 14px; background: var(--danger); color: white;
+            border: none; border-radius: 12px; font-size: 17px; font-weight: 500; cursor: pointer; margin-top: 12px;
+        }
+        .moment-item { background: var(--card); padding: 16px; margin-bottom: 12px; }
+        .moment-header { display: flex; align-items: center; margin-bottom: 12px; }
+        .moment-avatar {
+            width: 40px; height: 40px; border-radius: 50%; background: var(--primary);
+            display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; margin-right: 10px;
+        }
+        .moment-name { font-size: 15px; font-weight: 600; }
+        .moment-mood { font-size: 13px; color: var(--text-secondary); }
+        .moment-content { font-size: 15px; line-height: 1.5; margin-bottom: 12px; }
+        .moment-images { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 12px; }
+        .moment-image {
+            width: 100%; padding-top: 100%; background: var(--bg); border-radius: 4px;
+            overflow: hidden; position: relative;
+        }
+        .moment-image img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+        .moment-footer {
+            display: flex; align-items: center; justify-content: space-between;
+            padding-top: 12px; border-top: 0.5px solid var(--separator);
+        }
+        .moment-date { font-size: 13px; color: var(--text-tertiary); }
+        .moment-actions { display: flex; gap: 16px; }
+        .moment-action { font-size: 13px; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; gap: 4px; }
+        .moment-action.active { color: var(--primary); }
+        .comments-section { margin-top: 12px; padding-top: 12px; border-top: 0.5px solid var(--separator); }
+        .comment-item { display: flex; gap: 8px; margin-bottom: 10px; }
+        .comment-avatar {
+            width: 28px; height: 28px; border-radius: 50%; background: var(--primary);
+            display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; flex-shrink: 0;
+        }
+        .comment-content { flex: 1; }
+        .comment-name { font-size: 13px; font-weight: 600; color: var(--primary); }
+        .comment-text { font-size: 14px; margin-top: 2px; }
+        .comment-input-row { display: flex; gap: 8px; margin-top: 12px; }
+        .comment-input {
+            flex: 1; border: none; background: var(--bg); border-radius: 16px;
+            padding: 8px 14px; font-size: 14px; outline: none;
+        }
+        .comment-send {
+            padding: 8px 14px; background: var(--primary); color: white; border: none;
+            border-radius: 16px; font-size: 14px; cursor: pointer;
+        }
+        .profile-header { background: var(--card); padding: 20px 16px; }
+        .profile-top { display: flex; align-items: center; margin-bottom: 16px; }
+        .profile-avatar-large {
+            width: 80px; height: 80px; border-radius: 50%; background: var(--primary);
+            display: flex; align-items: center; justify-content: center; color: white; font-size: 36px; margin-right: 20px;
+        }
+        .profile-stats { flex: 1; display: flex; justify-content: space-around; }
+        .stat-item { text-align: center; }
+        .stat-number { font-size: 18px; font-weight: 600; }
+        .stat-label { font-size: 13px; color: var(--text-secondary); }
+        .profile-info { margin-bottom: 16px; }
+        .profile-name { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+        .profile-id { font-size: 14px; color: var(--text-secondary); margin-bottom: 4px; }
+        .profile-bio { font-size: 14px; line-height: 1.4; }
+        .profile-actions { display: flex; gap: 8px; }
+        .profile-btn {
+            flex: 1; padding: 8px; background: var(--bg); border: none; border-radius: 8px;
+            font-size: 14px; font-weight: 500; cursor: pointer; text-align: center;
+        }
+        .profile-btn.primary { background: var(--primary); color: white; }
+        .diary-header { position: relative; height: 180px; }
+        .diary-bg {
+            width: 100%; height: 120px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 0 0 24px 24px;
+        }
+        .diary-profile { position: absolute; bottom: 0; left: 20px; right: 20px; display: flex; align-items: flex-end; }
+        .diary-avatar { width: 80px; height: 80px; border-radius: 50%; background: var(--card); padding: 3px; margin-right: 16px; }
+        .diary-avatar-inner {
+            width: 100%; height: 100%; border-radius: 50%; background: var(--primary);
+            display: flex; align-items: center; justify-content: center; color: white; font-size: 32px;
+        }
+        .diary-info { flex: 1; padding-bottom: 8px; }
+        .diary-name { font-size: 18px; font-weight: 600; }
+        .diary-id { font-size: 14px; color: var(--text-secondary); }
+        .diary-stats { display: flex; gap: 24px; padding: 16px 20px; background: var(--card); margin-top: 8px; }
+        .diary-stat { text-align: center; }
+        .diary-stat-num { font-size: 18px; font-weight: 600; }
+        .diary-stat-label { font-size: 12px; color: var(--text-secondary); }
+        .diary-item {
+            background: var(--card); border-radius: 16px; padding: 20px;
+            margin: 12px 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .diary-content { font-size: 16px; line-height: 1.6; margin-bottom: 16px; }
+        .diary-footer { display: flex; align-items: center; justify-content: space-between; }
+        .diary-date { font-size: 13px; color: var(--text-tertiary); }
+        .diary-actions { display: flex; gap: 16px; }
+        .diary-action { font-size: 13px; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; gap: 4px; }
+        .diary-action.active { color: var(--danger); }
+        .letter-item { background: var(--card); border-radius: 12px; padding: 16px; margin-bottom: 12px; cursor: pointer; }
+        .letter-header { display: flex; align-items: center; margin-bottom: 10px; }
+        .letter-avatar {
+            width: 36px; height: 36px; border-radius: 50%; background: var(--primary);
+            display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; margin-right: 10px;
+        }
+        .letter-from { flex: 1; }
+        .letter-name { font-size: 15px; font-weight: 500; }
+        .letter-type { font-size: 12px; color: var(--text-secondary); }
+        .letter-date { font-size: 12px; color: var(--text-tertiary); }
+        .letter-content { font-size: 15px; line-height: 1.5; }
+        .letter-actions { display: flex; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 0.5px solid var(--separator); }
+        .letter-action { font-size: 13px; color: var(--text-secondary); cursor: pointer; }
+        .letter-action.active { color: var(--warning); }
+        .mood-item { background: var(--card); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+        .mood-header { display: flex; align-items: center; margin-bottom: 10px; }
+        .mood-avatar {
+            width: 36px; height: 36px; border-radius: 50%; background: var(--primary);
+            display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; margin-right: 10px;
+        }
+        .mood-name { font-size: 15px; font-weight: 500; }
+        .mood-type { font-size: 12px; color: var(--text-secondary); }
+        .mood-content { font-size: 15px; line-height: 1.5; }
+        .mood-footer {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-top: 12px; padding-top: 12px; border-top: 0.5px solid var(--separator);
+        }
+        .mood-date { font-size: 12px; color: var(--text-tertiary); }
+        .mood-actions { display: flex; gap: 16px; }
+        .mood-action { font-size: 13px; color: var(--text-secondary); cursor: pointer; }
+        .mood-action.active { color: var(--warning); }
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-tertiary); }
+        .empty-icon { font-size: 48px; margin-bottom: 16px; }
+        .empty-text { font-size: 15px; }
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4); z-index: 400; justify-content: center; align-items: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content { width: 85%; max-width: 340px; background: var(--card); border-radius: 16px; overflow: hidden; }
+        .modal-header { padding: 20px; text-align: center; border-bottom: 0.5px solid var(--separator); }
+        .modal-title { font-size: 17px; font-weight: 600; }
+        .modal-body { padding: 20px; }
+        .modal-input {
+            width: 100%; padding: 12px; border: 1px solid var(--separator);
+            border-radius: 10px; font-size: 16px; outline: none; margin-bottom: 12px;
+        }
+        .modal-input:focus { border-color: var(--primary); }
+        .modal-footer { display: flex; border-top: 0.5px solid var(--separator); }
+        .modal-btn { flex: 1; padding: 16px; text-align: center; font-size: 17px; cursor: pointer; border: none; background: none; }
+        .modal-btn.primary { color: var(--primary); font-weight: 600; border-left: 0.5px solid var(--separator); }
+        .modal-btn.cancel { color: var(--text); }
+        .toast {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8); color: white; padding: 12px 24px;
+            border-radius: 8px; font-size: 15px; z-index: 500; display: none;
+        }
+        .toast.active { display: block; }
+        ::-webkit-scrollbar { display: none; }
+        .image-upload { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+        .image-preview { width: 80px; height: 80px; border-radius: 8px; overflow: hidden; position: relative; }
+        .image-preview img { width: 100%; height: 100%; object-fit: cover; }
+        .image-add {
+            width: 80px; height: 80px; border-radius: 8px; background: var(--bg);
+            display: flex; align-items: center; justify-content: center; font-size: 32px;
+            color: var(--text-tertiary); cursor: pointer;
+        }
+        .pat-item {
+            background: var(--card); border-radius: 12px; padding: 16px; margin-bottom: 12px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .pat-text { font-size: 16px; flex: 1; }
+        .puzzle-pool { background: var(--card); border-radius: 12px; padding: 16px; margin-bottom: 16px; min-height: 100px; }
+        .puzzle-pool-title { font-size: 14px; color: var(--text-secondary); margin-bottom: 12px; }
+        .puzzle-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+        .puzzle-chip {
+            padding: 8px 14px; background: var(--bg); border-radius: 16px;
+            font-size: 15px; cursor: pointer; user-select: none;
+        }
+        .puzzle-chip.selected { background: var(--primary); color: white; }
+        .puzzle-result { background: var(--card); border-radius: 12px; padding: 16px; margin-bottom: 16px; min-height: 60px; }
+        .puzzle-result-text { font-size: 16px; line-height: 1.6; }
+        .picker-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 16px; background: var(--card); border-bottom: 0.5px solid var(--separator);
+        }
+        .picker-label { font-size: 16px; }
+        .picker-control { display: flex; align-items: center; gap: 8px; }
+        .picker-btn {
+            width: 32px; height: 32px; border-radius: 50%; background: var(--bg); border: none;
+            font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+        .picker-value { min-width: 40px; text-align: center; font-size: 16px; }
+        .slider-row { padding: 14px 16px; background: var(--card); border-bottom: 0.5px solid var(--separator); }
+        .slider-label { font-size: 16px; margin-bottom: 8px; display: flex; justify-content: space-between; }
+        .slider-value { color: var(--text-secondary); }
+        input[type="range"] {
+            width: 100%; height: 4px; border-radius: 2px; background: var(--separator);
+            outline: none; -webkit-appearance: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            width: 24px; height: 24px; border-radius: 50%; background: white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15); cursor: pointer; -webkit-appearance: none;
+        }
+        .color-row { display: flex; gap: 12px; padding: 14px 16px; background: var(--card); flex-wrap: wrap; }
+        .color-option { width: 36px; height: 36px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; }
+        .color-option.selected { border-color: var(--primary); }
+        @media (max-width: 430px) {
+            #app, .bottom-nav, .chat-page, .sub-page { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="login-screen">
+            <div class="login-logo">Entwine</div>
+            <div class="login-input-wrap">
+                <input type="password" class="login-input" id="login-password" placeholder="请输入密码" maxlength="20">
+            </div>
+            <button class="login-btn" onclick="doLogin()">进入</button>
+            <div class="login-error" id="login-error">密码错误</div>
+        </div>
+        <div id="main-app">
+            <div class="page" id="page-messages">
+                <div class="page-header">
+                    <span class="page-header-title" id="messages-title">消息</span>
+                    <button class="header-btn" onclick="showAddMenu()">+</button>
+                </div>
+                <div class="search-bar">
+                    <input type="text" class="search-input" id="message-search" placeholder="搜索" oninput="searchMessages()">
+                </div>
+                <div id="message-list"></div>
+            </div>
+            <div class="page" id="page-settings">
+                <div class="page-header"><span class="page-header-title">设置</span></div>
+                <div id="settings-content"></div>
+            </div>
+            <div class="page" id="page-moments">
+                <div class="page-header">
+                    <span class="page-header-title">朋友圈</span>
+                    <button class="header-btn" onclick="openMyProfile()">👤</button>
+                </div>
+                <div id="moments-list"></div>
+            </div>
+            <div class="page" id="page-diary">
+                <div id="diary-content"></div>
+            </div>
+            <div class="bottom-nav">
+                <div class="nav-item active" data-page="messages" onclick="switchPage('messages')">
+                    <span class="nav-icon">💬</span><span class="nav-label">消息</span>
+                </div>
+                <div class="nav-item" data-page="settings" onclick="switchPage('settings')">
+                    <span class="nav-icon">⚙️</span><span class="nav-label">设置</span>
+                </div>
+                <div class="nav-item" data-page="moments" onclick="switchPage('moments')">
+                    <span class="nav-icon">🌈</span><span class="nav-label">朋友圈</span>
+                </div>
+                <div class="nav-item" data-page="diary" onclick="switchPage('diary')">
+                    <span class="nav-icon">📖</span><span class="nav-label">日记</span>
+                </div>
+            </div>
+        </div>
+        <div class="chat-page" id="chat-page">
+            <div class="chat-header">
+                <span class="chat-back" onclick="closeChat()">‹</span>
+                <div class="chat-peer-info">
+                    <div class="chat-peer-avatar" id="chat-peer-avatar">👤</div>
+                    <div>
+                        <div class="chat-peer-name" id="chat-peer-name"></div>
+                        <div class="chat-peer-status" id="chat-peer-status">正在输入…</div>
+                    </div>
+                </div>
+                <span class="chat-more" onclick="showChatMenu()">⋯</span>
+            </div>
+            <div class="chat-messages" id="chat-messages"></div>
+            <div class="chat-input-area">
+                <div class="chat-input-row">
+                    <div class="chat-plus-btn" onclick="toggleChatMenu()">+</div>
+                    <textarea class="chat-input" id="chat-input" placeholder="输入消息" rows="1"></textarea>
+                    <button class="chat-send-btn" onclick="sendMessage()">发送</button>
+                </div>
+                <div class="chat-menu" id="chat-menu">
+                    <div class="menu-item" onclick="sendImage()"><div class="menu-icon">🖼️</div><div class="menu-label">图片</div></div>
+                    <div class="menu-item" onclick="sendEmoji()"><div class="menu-icon">😊</div><div class="menu-label">表情</div></div>
+                    <div class="menu-item" onclick="drawCard()"><div class="menu-icon">🎴</div><div class="menu-label">抽字卡</div></div>
+                    <div class="menu-item" onclick="sendPat()"><div class="menu-icon">👋</div><div class="menu-label">拍一拍</div></div>
+                </div>
+            </div>
+        </div>
+        <div class="action-sheet" id="chat-action-sheet">
+            <div class="action-sheet-content">
+                <div class="action-sheet-item" onclick="openChatSettings()">聊天设置</div>
+                <div class="action-sheet-item" onclick="openAdvancedSettings()">高级设置</div>
+                <div class="action-sheet-item" onclick="openBeautify()">美化</div>
+                <div class="action-sheet-item" onclick="openArchive()">存档</div>
+                <div class="action-sheet-cancel" onclick="closeActionSheet()">取消</div>
+            </div>
+        </div>
+        <div class="action-sheet" id="add-action-sheet">
+            <div class="action-sheet-content">
+                <div class="action-sheet-item" onclick="showAddFriend()">添加好友</div>
+                <div class="action-sheet-item" onclick="showCreateGroup()">发起群聊</div>
+                <div class="action-sheet-cancel" onclick="closeActionSheet()">取消</div>
+            </div>
+        </div>
+        <div class="modal" id="add-friend-modal">
+            <div class="modal-content">
+                <div class="modal-header"><div class="modal-title">添加好友</div></div>
+                <div class="modal-body"><input type="text" class="modal-input" id="friend-remark" placeholder="备注名称"></div>
+                <div class="modal-footer">
+                    <button class="modal-btn cancel" onclick="closeModal('add-friend-modal')">取消</button>
+                    <button class="modal-btn primary" onclick="addFriend()">添加</button>
+                </div>
+            </div>
+        </div>
+        <div class="modal" id="create-group-modal">
+            <div class="modal-content">
+                <div class="modal-header"><div class="modal-title">发起群聊</div></div>
+                <div class="modal-body">
+                    <input type="text" class="modal-input" id="group-name" placeholder="群聊名称">
+                    <div id="friend-select-list" style="max-height:200px;overflow-y:auto;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="modal-btn cancel" onclick="closeModal('create-group-modal')">取消</button>
+                    <button class="modal-btn primary" onclick="createGroup()">创建</button>
+                </div>
+            </div>
+        </div>
+        <div id="sub-pages"></div>
+        <div class="toast" id="toast"></div>
+    </div>
+
+    <script>
+        const DB_KEY = 'entwine_data';
+        function getDefaultData() {
+            return {
+                password: 'Hanxlqxzyfz', loggedIn: false,
+                friends: [], chats: {},
+                globalCards: [], globalEmojis: [], globalPats: [],
+                replyManagement: [], moodCards: [],
+                letters: [], sentLetters: [],
+                moments: [], myMoments: [],
+                myProfile: { avatar: '👤', name: '我', id: '@me', bio: '', region: '', status: '' },
+                diaryProfile: { avatar: '👤', name: '我', id: '@me', region: '', bg: '' },
+                diaries: [],
+                settings: { appearance: { globalBg: '', fontSize: 16, bubbleSize: 1 }, keepOnline: false },
+                archives: [], collections: []
+            };
+        }
+        function loadData() {
+            try { const d = localStorage.getItem(DB_KEY); if (d) return JSON.parse(d); } catch(e) {}
+            return getDefaultData();
+        }
+        function saveData() { localStorage.setItem(DB_KEY, JSON.stringify(appData)); }
+        let appData = loadData();
+
+        function doLogin() {
+            const pwd = document.getElementById('login-password').value;
+            if (pwd === appData.password) {
+                appData.loggedIn = true; saveData();
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('main-app').style.display = 'block';
+                initApp();
+            } else { document.getElementById('login-error').style.display = 'block'; }
+        }
+        document.getElementById('login-password').addEventListener('keypress', e => { if (e.key === 'Enter') doLogin(); });
+
+        function switchPage(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('page-' + page).classList.add('active');
+            document.querySelector('.nav-item[data-page="' + page + '"]').classList.add('active');
+            if (page === 'messages') renderMessages();
+            if (page === 'settings') renderSettings();
+            if (page === 'moments') renderMoments();
+            if (page === 'diary') renderDiary();
+        }
+
+        function initApp() { renderMessages(); renderSettings(); renderMoments(); renderDiary(); }
+
+        function showToast(text) {
+            const t = document.getElementById('toast');
+            t.textContent = text; t.classList.add('active');
+            setTimeout(() => t.classList.remove('active'), 2000);
+        }
+
+        function renderMessages() {
+            const list = document.getElementById('message-list');
+            const title = document.getElementById('messages-title');
+            let unread = 0;
+            Object.values(appData.chats).forEach(c => unread += c.unread || 0);
+            title.textContent = unread > 0 ? `消息(${unread})` : '消息';
+            if (appData.friends.length === 0) {
+                list.innerHTML = '<div class="empty-state"><div class="empty-icon">💬</div><div class="empty-text">暂无消息，点击右上角 + 添加好友</div></div>';
+                return;
+            }
+            let html = '';
+            appData.friends.forEach(f => {
+                const chat = appData.chats[f.id] || { messages: [], unread: 0 };
+                const last = chat.messages[chat.messages.length - 1];
+                const text = last ? (last.type === 'image' ? '[图片]' : last.content) : '暂无消息';
+                const time = last ? formatTime(last.time) : '';
+                html += `<div class="list-item" onclick="openChat('${f.id}')">
+                    <div class="list-avatar">${f.avatar || '👤'}</div>
+                    <div class="list-content"><div class="list-title">${f.remark}</div><div class="list-subtitle">${text}</div></div>
+                    <div class="list-right"><div class="list-time">${time}</div>${chat.unread > 0 ? '<span class="badge">' + chat.unread + '</span>' : ''}</div>
+                </div>`;
+            });
+            list.innerHTML = html;
+        }
+
+        function formatTime(ts) {
+            const d = new Date(ts), now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const msgDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+            if (msgDate.getTime() === today.getTime()) return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+            if (msgDate.getTime() === today.getTime() - 86400000) return '昨天';
+            return (d.getMonth()+1) + '月' + d.getDate() + '日';
+        }
+
+        function searchMessages() {
+            const kw = document.getElementById('message-search').value.toLowerCase();
+            if (!kw) { renderMessages(); return; }
+            const list = document.getElementById('message-list');
+            let html = '';
+            appData.friends.forEach(f => {
+                if (f.remark.toLowerCase().includes(kw)) {
+                    const chat = appData.chats[f.id] || { messages: [] };
+                    const last = chat.messages[chat.messages.length - 1];
+                    html += `<div class="list-item" onclick="openChat('${f.id}')"><div class="list-avatar">${f.avatar||'👤'}</div><div class="list-content"><div class="list-title">${f.remark}</div><div class="list-subtitle">${last?last.content:''}</div></div></div>`;
+                }
+            });
+            appData.friends.forEach(f => {
+                const chat = appData.chats[f.id];
+                if (chat) chat.messages.forEach(m => {
+                    if (m.content.toLowerCase().includes(kw)) {
+                        html += `<div class="list-item" onclick="openChat('${f.id}')"><div class="list-avatar">${f.avatar||'👤'}</div><div class="list-content"><div class="list-title">${f.remark}</div><div class="list-subtitle">${m.content.substring(0,30)}...</div></div></div>`;
+                    }
+                });
+            });
+            list.innerHTML = html || '<div class="empty-state"><div class="empty-text">未找到相关结果</div></div>';
+        }
+
+        let currentChatId = null;
+        function openChat(id) {
+            currentChatId = id;
+            const f = appData.friends.find(x => x.id === id);
+            if (!f) return;
+            if (appData.chats[id]) { appData.chats[id].unread = 0; saveData(); }
+            document.getElementById('chat-peer-avatar').textContent = f.avatar || '👤';
+            document.getElementById('chat-peer-name').textContent = f.remark;
+            const s = f.advancedSettings || {};
+            document.getElementById('chat-peer-status').style.display = s.showTyping !== false ? 'block' : 'none';
+            renderChatMessages();
+            document.getElementById('chat-page').classList.add('active');
+        }
+        function closeChat() {
+            document.getElementById('chat-page').classList.remove('active');
+            currentChatId = null; renderMessages();
+        }
+        function renderChatMessages() {
+            const c = document.getElementById('chat-messages');
+            const chat = appData.chats[currentChatId] || { messages: [] };
+            const f = appData.friends.find(x => x.id === currentChatId);
+            const s = f?.advancedSettings || {};
+            let html = '', lastDate = '';
+            chat.messages.forEach(m => {
+                if (s.showDate) {
+                    const d = new Date(m.time);
+                    const ds = d.getFullYear() + '年' + (d.getMonth()+1) + '月' + d.getDate() + '日';
+                    if (ds !== lastDate) { html += `<div style="text-align:center;margin:16px 0;"><span style="font-size:12px;color:var(--text-tertiary);background:var(--bg);padding:4px 12px;border-radius:10px;">${ds}</span></div>`; lastDate = ds; }
+                }
+                const own = m.from === 'me';
+                html += `<div class="message-row ${own?'own':''}"><div class="message-avatar">${own?'我':(f?.avatar||'👤')}</div><div class="message-content">${m.quote?'<div class="message-quote">'+m.quote+'</div>':''}<div class="message-bubble">${m.type==='image'?'🖼️ [图片]':m.content}</div>${s.showReadReceipt&&own?'<div class="message-meta">已读</div>':''}</div></div>`;
+            });
+            c.innerHTML = html;
+            c.scrollTop = c.scrollHeight;
+        }
+        function sendMessage() {
+            const inp = document.getElementById('chat-input');
+            const t = inp.value.trim();
+            if (!t || !currentChatId) return;
+            addMessage(currentChatId, 'me', t);
+            inp.value = '';
+            simulateReply(currentChatId);
+        }
+        function addMessage(cid, from, content, type='text', quote=null) {
+            if (!appData.chats[cid]) appData.chats[cid] = { messages: [], unread: 0 };
+            appData.chats[cid].messages.push({ from, content, type, quote, time: Date.now() });
+            saveData();
+            if (cid === currentChatId) renderChatMessages();
+        }
+        function simulateReply(cid) {
+            const f = appData.friends.find(x => x.id === cid);
+            if (!f) return;
+            const s = f.advancedSettings || {};
+            const minW = s.minWait || 2, maxW = s.maxWait || 10;
+            const wait = (Math.random() * (maxW - minW) + minW) * 1000;
+            const cards = [...(f.cards||[]), ...appData.globalCards];
+            if (!cards.length) return;
+            setTimeout(() => {
+                const card = cards[Math.floor(Math.random() * cards.length)];
+                addMessage(cid, 'peer', card.text || card);
+                if (!appData.chats[cid]) appData.chats[cid] = { messages: [], unread: 0 };
+                appData.chats[cid].unread = (appData.chats[cid].unread || 0) + 1;
+                saveData();
+                if (currentChatId !== cid) renderMessages();
+            }, wait);
+        }
+        function toggleChatMenu() { document.getElementById('chat-menu').classList.toggle('active'); }
+        function sendImage() { showToast('图片功能开发中'); document.getElementById('chat-menu').classList.remove('active'); }
+        function sendEmoji() {
+            const f = appData.friends.find(x => x.id === currentChatId);
+            const emojis = [...(f?.emojis||[]), ...appData.globalEmojis];
+            if (!emojis.length) { showToast('暂无表情，请先在聊天设置中添加'); return; }
+            addMessage(currentChatId, 'me', emojis[Math.floor(Math.random()*emojis.length)].text || emojis[0]);
+            document.getElementById('chat-menu').classList.remove('active');
+            simulateReply(currentChatId);
+        }
+        function drawCard() {
+            const f = appData.friends.find(x => x.id === currentChatId);
+            const cards = [...(f?.cards||[]), ...appData.globalCards];
+            if (!cards.length) { showToast('暂无字卡，请先在聊天设置中添加'); return; }
+            addMessage(currentChatId, 'me', cards[Math.floor(Math.random()*cards.length)].text || cards[0]);
+            document.getElementById('chat-menu').classList.remove('active');
+            simulateReply(currentChatId);
+        }
+        function sendPat() {
+            const f = appData.friends.find(x => x.id === currentChatId);
+            const pats = [...(f?.pats||[]), ...appData.globalPats];
+            if (!pats.length) { showToast('暂无拍一拍内容，请先在聊天设置中添加'); return; }
+            addMessage(currentChatId, 'me', pats[Math.floor(Math.random()*pats.length)].text || pats[0]);
+            document.getElementById('chat-menu').classList.remove('active');
+            simulateReply(currentChatId);
+        }
+        function showChatMenu() { document.getElementById('chat-action-sheet').classList.add('active'); }
+        function closeActionSheet() { document.querySelectorAll('.action-sheet').forEach(s => s.classList.remove('active')); }
+
+        function openSubPage(id, title, content) {
+            const container = document.getElementById('sub-pages');
+            const pid = 'sub-' + id;
+            const existing = document.getElementById(pid);
+            if (existing) existing.remove();
+            const page = document.createElement('div');
+            page.className = 'sub-page'; page.id = pid;
+            page.innerHTML = `<div class="sub-page-header"><button class="header-btn-left" onclick="closeSubPage('${pid}')">‹ 返回</button><span class="sub-page-title">${title}</span></div><div class="sub-page-body">${content}</div>`;
+            container.appendChild(page);
+            setTimeout(() => page.classList.add('active'), 10);
+        }
+        function closeSubPage(id) {
+            const p = document.getElementById(id);
+            if (p) { p.classList.remove('active'); setTimeout(() => p.remove(), 300); }
+        }
+
+        function openChatSettings() {
+            closeActionSheet();
+            const content = `<div class="settings-group">
+                <div class="settings-item" onclick="openCards()"><span class="settings-label">🎴 字卡</span><span class="settings-arrow">›</span></div>
+                <div class="settings-item" onclick="openEmojis()"><span class="settings-label">😊 Emoji / 表情</span><span class="settings-arrow">›</span></div>
+                <div class="settings-item" onclick="openPats()"><span class="settings-label">👋 拍一拍</span><span class="settings-arrow">›</span></div>
+                <div class="settings-item" onclick="openPuzzle()"><span class="settings-label">🧩 拼字</span><span class="settings-arrow">›</span></div>
+            </div>`;
+            openSubPage('chat-settings', '聊天设置', content);
+        }
+
+        function openCards() {
+            const f = appData.friends.find(x => x.id === currentChatId);
+            if (!f) return;
+            const cards = f.cards || [];
+            let ch = '';
+            cards.forEach((c, i) => {
+                ch += `<div class="card-item"><span class="card-text">${c.text||c}</span><div class="card-actions"><span class="card-btn" onclick="moveCard(${i})">移动</span><span class="card-btn danger" onclick="deleteCard(${i})">删除</span></div></div>`;
+            });
+            const content = `<div class="input-area">
+                <textarea id="new-card-text" rows="3" placeholder="输入字卡内容，每行一条"></textarea>
+                <button class="btn-primary" onclick="addCard()">添加字卡</button>
+                <button class="btn-primary" onclick="dedupeCards()" style="background:var(--warning);">查重 / 清除重复</button>
+            </div>
+            <div style="margin-bottom:12px;"><input type="text" class="search-input" placeholder="搜索字卡" oninput="searchCards(this.value)"></div>
+            <div id="cards-list">${ch || '<div class="empty-state"><div class="empty-text">暂无字卡</div></div>'}</div>`;
+            openSubPage('cards', '字卡', content);
+        }
+        function addCard() {
+            const t = document.getElementById('new-card-text').value.trim();
+            if (!t) return;
+            const f = appData.friends.find(x => x.id === currentChatId);
+            if (!f) return;
+            if (!f.cards) f.cards = [];
+            t.split('\n').filter(l => l.trim()).forEach(l => f.cards.push({ text: l.trim(), created: Date.now() }));
+            saveData(); showToast('已添加'); document.getElementById('new-card-text').value = ''; openCards();
+        }
+        function deleteCard(i) {
+            const f = appData.friends.find(x => x.id === currentChatId);
+            if (!f?.cards) return;
+            f.cards.splice(i, 1); saveData(); openCards();
+        }
+        function moveCard(i) {
+            const f = appData.friends.find(x => x.id === currentChatId);
+            if (!f?.cards) return;
+            const others = appData.friends.filter(x => x.id !== currentChatId);
+            if (!others.length) { showToast('没有其他好友'); return; }
+            let opts = '';
+            others.forEach(o => { opts += `<div class="action-sheet-item" onclick="doMoveCard(${i},'${o.id}')">${o.remark}</div>`; });
+            const sheet = document.createElement('div');
+            sheet.className = 'action-sheet active'; sheet.id = 'move-sheet';
+            sheet.innerHTML = `<div class="action-sheet-content">${opts}<div class="action-sheet-cancel" onclick="document.getElementById('move-sheet').remove()">取消</div></div>`;
+            document.body.appendChild(sheet);
+        }
+        function doMoveCard(i, tid) {
+            const f = appData.friends.find(x => x.id === currentChatId);
+            const t = appData.friends.find(x => x.id === tid);
+            if (!f?.cards || !t) return;
+            if (!t.cards) t.cards = [];
+            t.cards.push(f.cards[i]);
+            saveData(); document.getElementById('move-sheet').remove(); showToast('已复制到 ' + t.remark);
+        }
+        function dedupeCards() {
+            const f = appData.friends.find(x => x.id === currentChatId);
+            if (!f?.cards) return;
+            const seen = new Set(); const orig = f.cards.length;
+            f.cards = f.cards.filter(c => { const t = c.text || c; if (seen.has(t)) return false; seen.add(t); return true; });
+            saveData(); showToast(`已清除 ${orig - f.cards.length} 张重复字卡`); openCards();
+        }
+        function searchCards(kw) {
+            const f = appData.friends.find(x => x.id === currentChatId);
+            if (!f?.cards) return;
+            const filtered = f.cards.filter(c => (c.text||c).toLowerCase().includes(kw.toLowerCase()));
+            let h = '';
+            filtered.forEach(c => { h += `<div class="card-item"><span class="card-text">${c.text||c}</span></div>`; });
+            document.getElementById('cards-list').innerHTML = h || '<div class="empty-state"><div class="empty-text">未找到匹配字卡</div></div>';
+        }
+
+        function openEmojis() {
+            const f = appData.friends.find(x => x.id === currentChatId);
+            if (!f) return;
+            const emojis = f.emojis || [];
+            let eh = '';
+            emojis.forEach((e, i) => { eh += `<div class="card-item"><span class="card-text" style="font-size:24px;">${e.text||e}</span><div class="card-actions"><span class="card-btn danger" onclick="deleteEmoji(${i})">删除</span></div></div>`; });
+            const content = `<div class="input-area">
+                <input type="text" id="new-emoji" placeholder="输入 emoji 或文字表情" style="width:100%;padding:12px;border:1px solid var(--separator);border-radius:10px;font-size:16px;">
+                <button class="btn-primary" onclick="addEmoji()">添加表情</button>
+            </div><div id="emojis-list">${eh || '<div class="empty-state"><div class="empty-text">暂无表情</div></div>'}</div>`;
+            openSubPage('emojis', '表情', content);
+        }
+        function addEmoji() {
+            const t = document.getElementById('new-emoji').value.trim();
+            if (!t) return;
+            const f = appData.friends.find(x => x.id === currentChatId);
+            if (!f) return;
+            if (!f.emojis) f.emojis = [];
+            f.emojis.push({ text: t, created: Date.now() });
+            saveData(); document.getElementById('new-emoji').value = ''; openEmojis();
+        }
+        function deleteEmoji(i) {
+            const f = appData.friends.find(x => x.id === currentChatId);
+            if (!f?.emojis) return;
+            f.emojis.splice(i, 1); saveData(); openEmojis();
+        }
+
+        function openPats() {
+            const f = appData.friends.find(x => x.id === currentChatId);
+            if (!f) return;
+            const pats = f.pats || [];
+            let ph = '';
+            pats.forEach((p, i) => { ph += `<div class="pat-item"><span class="pat-text">${p.text||p}</span><span class="card-btn danger" onclick="deletePat(${i})">删除</span></div>`; });
+            const content = `<div class="input-area">
+                <input type="text" id="new-pat" placeholder="输入拍一拍内容" style="width:100%;padding:12px;border:1px solid var(--separator);border-radius:10px;font-size:16px;">
+                <button class="btn-primary" onclick="addPat()">添加拍一拍</button>
+            </div><div id="pats-list">${ph || '<div class="empty-state"><div class="empty-text">暂无拍一拍内容</div></div>'}</div>`;
+            openSubPage('pats', '拍一拍', content);
+        }
+        function addPat() {
+            const t = document.getElementById('new-pat').value.trim();
+            if (!t) return;
+            const f = appData.friends.find(x => x.id === currentChatId);
+            if (!f) return;
+            if (!f.pats) f.pats = [];
+            f.pats.push({ text: t, created: Date.now() });
+            saveData(); document.getElementById('new-pat').value = ''; openPats();
+        }
+        function deletePat(i) {
+            const f = appData.friends.find(x => x.id === currentChatId);
+            if (!f?.pats) return;
+            f.pats.splice(i, 1); saveData(); openPats();
+        }
+
+        function openPuzzle() {
+            const f = appData.friends.find(x => x.id === currentChatId);
+            if (!f) return;
+            const cards = f.cards || [];
+            let chips = '';
+            cards.forEach((c, i) => { chips += `<span class="puzzle-chip" id="chip-${i}" onclick="toggleChip(${i})">${c.text||c}</span>`; });
+            const content = `<div class="puzzle-pool"><div class="puzzle-pool-title">点击选择字卡碎片（从字卡中选取）</div><div class="puzzle-chips">${chips || '暂无字卡，请先在字卡中添加'}</div></div>
+            <div class="puzzle-result"><div class="puzzle-pool-title">拼成的句子</div><div class="puzzle-result-text" id="puzzle-result"></div></div>
+            <button class="btn-primary" onclick="sendPuzzle()">发送拼字结果</button>
+            <button class="btn-primary" onclick="clearPuzzle()" style="background:var(--text-secondary);">清空</button>`;
+            openSubPage('puzzle', '拼字', content);
+            window.selectedChips = [];
+        }
+        function toggleChip(i) {
+            const f = appData.friends.find(x => x.id === currentChatId);
+            if (!f?.cards) return;
+            const chip = document.getElementById('chip-' + i);
+            const idx = window.selectedChips.indexOf(i);
+            if (idx > -1) { window.selectedChips.splice(idx, 1); chip.classList.remove('selected'); }
+            else { window.selectedChips.push(i); chip.classList.add('selected'); }
+            updatePuzzleResult();
+        }
+        function updatePuzzleResult() {
+            const f = appData.friends.find(x => x.id === currentChatId);
+            if (!f?.cards) return;
+            const text = window.selectedChips.map(i => f.cards[i].text || f.cards[i]).join('');
+            document.getElementById('puzzle-result').textContent = text;
+        }
+        function sendPuzzle() {
+            const f = appData.friends.find(x => x.id === currentChatId);
+            if (!f?.cards || !window.selectedChips.length) { showToast('请先选择字卡'); return; }
+            const text = window.selectedChips.map(i => f.cards[i].text || f.cards[i]).join('');
+            addMessage(currentChatId, 'me', text);
+            closeSubPage('sub-puzzle');
+            simulateReply(currentChatId);
+        }
+        function clearPuzzle() {
+            window.selectedChips = [];
+            document.querySelectorAll('.puzzle-chip').forEach(c => c.classList.remove('selected'));
+            document.getElementById('puzzle-result').textContent = '';
+        }
+
+        function openAdvancedSettings() {
+            closeActionSheet();
+            const f = appData.friends.find(x => x.id === currentChatId);
+            if (!f) return;
+            if (!f.advancedSettings) f.advancedSettings = {};
+            const s = f.advancedSettings;
+            const content = `<div class="settings-group">
+                <div class="settings-item"><span class="settings-label">引用回复</span><div class="toggle ${s.quoteReply?'on':''}" onclick="toggleAdvSetting('quoteReply')"><div class="toggle-handle"></div></div></div>
+                <div class="settings-item"><span class="settings-label">已读回执</span><div class="toggle ${s.showReadReceipt?'on':''}" onclick="toggleAdvSetting('showReadReceipt')"><div class="toggle-handle"></div></div></div>
+                <div class="settings-item"><span class="settings-label">日期显示</span><div class="toggle ${s.showDate?'on':''}" onclick="toggleAdvSetting('showDate')"><div class="toggle-handle"></div></div></div>
+                <div class="settings-item"><span class="settings-label">正在输入</span><div class="toggle ${s.showTyping!==false?'on':''}" onclick="toggleAdvSetting('showTyping')"><div class="toggle-handle"></div></div></div>
+            </div>
+            <div class="section-header">主动发信息</div>
+            <div class="settings-group">
+                <div class="picker-row"><span class="picker-label">间隔（分钟）</span><div class="picker-control">
+                    <button class="picker-btn" onclick="changeAdvValue('autoSendInterval',-5,5,120)">−</button>
+                    <span class="picker-value" id="autoSendInterval-val">${s.autoSendInterval||30}</span>
+                    <button class="picker-btn" onclick="changeAdvValue('autoSendInterval',5,5,120)">+</button>
+                </div></div>
+            </div>
+            <div class="section-header">回复节奏</div>
+            <div class="settings-group">
+                <div class="picker-row"><span class="picker-label">最短等待（秒）</span><div class="picker-control">
+                    <button class="picker-btn" onclick="changeAdvValue('minWait',-1,1,60)">−</button>
+                    <span class="picker-value" id="minWait-val">${s.minWait||2}</span>
+                    <button class="picker-btn" onclick="changeAdvValue('minWait',1,1,60)">+</button>
+                </div></div>
+                <div class="picker-row"><span class="picker-label">最长等待（秒）</span><div class="picker-control">
+                    <button class="picker-btn" onclick="changeAdvValue('maxWait',-1,1,300)">−</button>
+                    <span class="picker-value" id="maxWait-val">${s.maxWait||10}</span>
+                    <button class="picker-btn" onclick="changeAdvValue('maxWait',1,1,300)">+</button>
+                </div></div>
+            </div>`;
+            openSubPage('adv-settings', '高级设置', content);
+        }
+        function toggleAdvSetting(key) {
+            const f = appData.friends.find(x => x.id === currentChatId);
+            if (!f) return;
+            if (!f.advancedSettings) f.advancedSettings = {};
+            if (key === 'showTyping') f.advancedSettings[key] = f.advancedSettings[key] === false ? true : false;
+            else f.advancedSettings[key] = !f.advancedSettings[key];
+            saveData(); openAdvancedSettings();
+        }
+        function changeAdvValue(key, delta, min, max) {
+            const f = appData.friends.find(x => x.id === currentChatId);
+            if (!f) return;
+            if (!f.advancedSettings) f.advancedSettings = {};
+            let v = (f.advancedSettings[key] || (key==='autoSendInterval'?30:2)) + delta;
+            v = Math.max(min, Math.min(max, v));
+            f.advancedSettings[key] = v;
+            saveData();
+            document.getElementById(key + '-val').textContent = v;
+        }
+
+        function openBeautify() {
+            closeActionSheet();
+            const f = appData.friends.find(x => x.id === currentChatId);
+            if (!f) return;
+            if (!f.beautify) f.beautify = {};
+            const b = f.beautify;
+            const colors = ['#007AFF','#FF3B30','#FF9500','#FFCC00','#34C759','#00C7BE','#32ADE6','#AF52DE','#FF2D55'];
+            let colorOpts = '';
+            colors.forEach(c => { colorOpts += `<div class="color-option ${b.bubbleColor===c?'selected':''}" style="background:${c}" onclick="setBubbleColor('${c}')"></div>`; });
+            const content = `<div class="section-header">气泡颜色</div>
+            <div class="color-row">${colorOpts}</div>
+            <div class="section-header">字体大小</div>
+            <div class="slider-row"><div class="slider-label"><span>大小</span><span class="slider-value" id="font-size-val">${b.fontSize||16}px</span></div>
+                <input type="range" min="12" max="24" value="${b.fontSize||16}" oninput="updateBeautify('fontSize',this.value)"></div>
+            <div class="section-header">气泡大小</div>
+            <div class="slider-row"><div class="slider-label"><span>比例</span><span class="slider-value" id="bubble-size-val">${b.bubbleSize||1}x</span></div>
+                <input type="range" min="0.8" max="1.5" step="0.1" value="${b.bubbleSize||1}" oninput="updateBeautify('bubbleSize',this.value)"></div>
+            <div class="section-header">自定义 CSS</div>
+            <div class="input-area"><textarea id="custom-css" rows="4" placeholder="输入自定义 CSS 代码">${b.customCss||''}</textarea>
+            <button class="btn-primary" onclick="saveCustomCss()">保存 CSS</button></div>`;
+            openSubPage('beautify', '美化', content);
+        }
+        function setBubbleColor(c) {
+            const f = appData.friends.find(x => x.id === currentChatId);
+            if (!f) return;
+            if (!f.beautify) f.beautify = {};
+            f.beautify.bubbleColor = c;
+            saveData(); openBeautify();
+        }
+        function updateBeautify(key, val) {
+            const f = appData.friends.find(x => x.id === currentChatId);
+            if (!f) return;
+            if (!f.beautify) f.beautify = {};
+            f.beautify[key] = parseFloat(val);
+            saveData();
+            document.getElementById(key + '-val').textContent = val + (key==='fontSize'?'px':'x');
+        }
+        function saveCustomCss() {
+            const f = appData.friends.find(x => x.id === currentChatId);
+            if (!f) return;
+            if (!f.beautify) f.beautify = {};
+            f.beautify.customCss = document.getElementById('custom-css').value;
+            saveData(); showToast('CSS 已保存');
+        }
+
+        function openArchive() {
+            closeActionSheet();
+            const content = `<div class="settings-group">
+                <div class="settings-item" onclick="backupChat()"><span class="settings-label">💾 备份当前聊天记录</span></div>
+                <div class="settings-item danger" onclick="deleteChatConfirm()"><span class="settings-label" style="color:var(--danger);">🗑️ 删除聊天</span></div>
+            </div>
+            <div class="section-header">备份记录</div>
+            <div id="archives-list">${renderArchives()}</div>`;
+            openSubPage('archive', '存档', content);
+        }
+        function renderArchives() {
+            if (!appData.archives.length) return '<div class="empty-state"><div class="empty-text">暂无备份</div></div>';
+            let h = '';
+            appData.archives.forEach((a, i) => {
+                h += `<div class="card-item"><span class="card-text">${a.name}<br><small style="color:var(--text-tertiary);">${new Date(a.time).toLocaleString()}</small></span></div>`;
+            });
+            return h;
+        }
+        function backupChat() {
+            const f = appData.friends.find(x => x.id === currentChatId);
+            if (!f) return;
+            const chat = appData.chats[currentChatId];
+            if (!chat || !chat.messages.length) { showToast('暂无聊天记录'); return; }
+            appData.archives.push({ name: f.remark, time: Date.now(), messages: JSON.parse(JSON.stringify(chat.messages)) });
+            saveData(); showToast('已备份'); openArchive();
+        }
+        function deleteChatConfirm() {
+            if (confirm('确定要删除聊天记录吗？此操作不可恢复。')) {
+                if (confirm('再次确认：删除后所有消息将被清空。')) {
+                    appData.chats[currentChatId] = { messages: [], unread: 0 };
+                    saveData(); showToast('聊天记录已删除'); closeSubPage('sub-archive'); renderChatMessages();
+                }
+            }
+        }
+
+        function showAddMenu() { document.getElementById('add-action-sheet').classList.add('active'); }
+        function showAddFriend() {
+            closeActionSheet();
+            document.getElementById('add-friend-modal').classList.add('active');
+            document.getElementById('friend-remark').value = '';
+        }
+        function addFriend() {
+            const remark = document.getElementById('friend-remark').value.trim();
+            if (!remark) { showToast('请输入备注名称'); return; }
+            const id = 'friend_' + Date.now();
+            appData.friends.push({ id, remark, avatar: '👤', created: Date.now(), cards: [], emojis: [], pats: [], advancedSettings: {}, beautify: {} });
+            saveData(); closeModal('add-friend-modal'); showToast('已添加好友'); renderMessages();
+        }
+        function showCreateGroup() {
+            closeActionSheet();
+            if (!appData.friends.length) { showToast('请先添加好友'); return; }
+            let h = '';
+            appData.friends.forEach(f => { h += `<div class="settings-item" onclick="toggleFriendSelect('${f.id}',this)"><span>${f.remark}</span><span class="settings-arrow" id="sel-${f.id}">○</span></div>`; });
+            document.getElementById('friend-select-list').innerHTML = h;
+            window.selectedFriends = [];
+            document.getElementById('create-group-modal').classList.add('active');
+        }
+        function toggleFriendSelect(id, el) {
+            const idx = window.selectedFriends.indexOf(id);
+            if (idx > -1) { window.selectedFriends.splice(idx, 1); document.getElementById('sel-' + id).textContent = '○'; }
+            else { window.selectedFriends.push(id); document.getElementById('sel-' + id).textContent = '●'; }
+        }
+        function createGroup() {
+            const name = document.getElementById('group-name').value.trim();
+            if (!name) { showToast('请输入群聊名称'); return; }
+            if (!window.selectedFriends.length) { showToast('请选择好友'); return; }
+            const id = 'group_' + Date.now();
+            appData.friends.push({ id, remark: name, avatar: '👥', isGroup: true, members: window.selectedFriends, created: Date.now(), cards: [], emojis: [], pats: [] });
+            saveData(); closeModal('create-group-modal'); showToast('群聊已创建'); renderMessages();
+        }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        function renderSettings() {
+            const c = document.getElementById('settings-content');
+            c.innerHTML = `
+                <div class="section-header">全局设置</div>
+                <div class="settings-group">
+                    <div class="settings-item" onclick="openGlobalCards()"><span class="settings-label">🎴 全局字卡</span><span class="settings-arrow">›</span></div>
+                    <div class="settings-item" onclick="openGlobalEmojis()"><span class="settings-label">😊 全局表情</span><span class="settings-arrow">›</span></div>
+                    <div class="settings-item" onclick="openGlobalPats()"><span class="settings-label">👋 全局拍一拍</span><span class="settings-arrow">›</span></div>
+                    <div class="settings-item" onclick="openReplyMgmt()"><span class="settings-label">💬 回复管理</span><span class="settings-arrow">›</span></div>
+                    <div class="settings-item" onclick="openMoodBook()"><span class="settings-label">📖 心事簿</span><span class="settings-arrow">›</span></div>
+                </div>
+                <div class="section-header">外观</div>
+                <div class="settings-group">
+                    <div class="settings-item" onclick="openAppearance()"><span class="settings-label">🎨 外观</span><span class="settings-arrow">›</span></div>
+                </div>
+                <div class="section-header">我的信箱</div>
+                <div class="settings-group">
+                    <div class="settings-item" onclick="openLetters()"><span class="settings-label">✉️ 见字如面</span><span class="settings-arrow">›</span></div>
+                </div>
+                <div class="section-header">数据管理</div>
+                <div class="settings-group">
+                    <div class="settings-item" onclick="backupAll()"><span class="settings-label">💾 备份全部数据</span></div>
+                    <div class="settings-item" onclick="backupChats()"><span class="settings-label">💬 备份聊天记录</span></div>
+                    <div class="settings-item" onclick="resetAll()"><span class="settings-label" style="color:var(--danger);">🗑️ 重置所有数据</span></div>
+                </div>`;
+        }
+
+        function openGlobalCards() {
+            let ch = '';
+            appData.globalCards.forEach((c, i) => { ch += `<div class="card-item"><span class="card-text">${c.text||c}</span><span class="card-btn danger" onclick="deleteGlobalCard(${i})">删除</span></div>`; });
+            const content = `<div class="input-area"><textarea id="new-global-card" rows="3" placeholder="输入字卡内容，每行一条"></textarea><button class="btn-primary" onclick="addGlobalCard()">添加</button></div><div>${ch || '<div class="empty-state"><div class="empty-text">暂无全局字卡</div></div>'}</div>`;
+            openSubPage('global-cards', '全局字卡', content);
+        }
+        function addGlobalCard() {
+            const t = document.getElementById('new-global-card').value.trim();
+            if (!t) return;
+            t.split('\n').filter(l => l.trim()).forEach(l => appData.globalCards.push({ text: l.trim(), created: Date.now() }));
+            saveData(); showToast('已添加'); openGlobalCards();
+        }
+        function deleteGlobalCard(i) { appData.globalCards.splice(i, 1); saveData(); openGlobalCards(); }
+
+        function openGlobalEmojis() {
+            let eh = '';
+            appData.globalEmojis.forEach((e, i) => { eh += `<div class="card-item"><span class="card-text" style="font-size:24px;">${e.text||e}</span><span class="card-btn danger" onclick="deleteGlobalEmoji(${i})">删除</span></div>`; });
+            const content = `<div class="input-area"><input type="text" id="new-global-emoji" placeholder="输入 emoji" style="width:100%;padding:12px;border:1px solid var(--separator);border-radius:10px;"><button class="btn-primary" onclick="addGlobalEmoji()">添加</button></div><div>${eh || '<div class="empty-state"><div class="empty-text">暂无全局表情</div></div>'}</div>`;
+            openSubPage('global-emojis', '全局表情', content);
+        }
+        function addGlobalEmoji() {
+            const t = document.getElementById('new-global-emoji').value.trim();
+            if (!t) return;
+            appData.globalEmojis.push({ text: t, created: Date.now() });
+            saveData(); document.getElementById('new-global-emoji').value = ''; openGlobalEmojis();
+        }
+        function deleteGlobalEmoji(i) { appData.globalEmojis.splice(i, 1); saveData(); openGlobalEmojis(); }
+
+        function openGlobalPats() {
+            let ph = '';
+            appData.globalPats.forEach((p, i) => { ph += `<div class="pat-item"><span class="pat-text">${p.text||p}</span><span class="card-btn danger" onclick="deleteGlobalPat(${i})">删除</span></div>`; });
+            const content = `<div class="input-area"><input type="text" id="new-global-pat" placeholder="输入拍一拍内容" style="width:100%;padding:12px;border:1px solid var(--separator);border-radius:10px;"><button class="btn-primary" onclick="addGlobalPat()">添加</button></div><div>${ph || '<div class="empty-state"><div class="empty-text">暂无全局拍一拍</div></div>'}</div>`;
+            openSubPage('global-pats', '全局拍一拍', content);
+        }
+        function addGlobalPat() {
+            const t = document.getElementById('new-global-pat').value.trim();
+            if (!t) return;
+            appData.globalPats.push({ text: t, created: Date.now() });
+            saveData(); document.getElementById('new-global-pat').value = ''; openGlobalPats();
+        }
+        function deleteGlobalPat(i) { appData.globalPats.splice(i, 1); saveData(); openGlobalPats(); }
+
+        function openReplyMgmt() {
+            let rh = '';
+            appData.replyManagement.forEach((r, i) => { rh += `<div class="card-item"><span class="card-text">${r.text||r}</span><span class="card-btn danger" onclick="deleteReply(${i})">删除</span></div>`; });
+            const content = `<div class="input-area"><textarea id="new-reply" rows="3" placeholder="输入回复内容，每行一条"></textarea><button class="btn-primary" onclick="addReply()">添加</button></div><div>${rh || '<div class="empty-state"><div class="empty-text">暂无回复内容</div></div>'}</div>`;
+            openSubPage('reply-mgmt', '回复管理', content);
+        }
+        function addReply() {
+            const t = document.getElementById('new-reply').value.trim();
+            if (!t) return;
+            t.split('\n').filter(l => l.trim()).forEach(l => appData.replyManagement.push({ text: l.trim(), created: Date.now() }));
+            saveData(); showToast('已添加'); openReplyMgmt();
+        }
+        function deleteReply(i) { appData.replyManagement.splice(i, 1); saveData(); openReplyMgmt(); }
+
+        function openMoodBook() {
+            let mh = '';
+            appData.moodCards.forEach((m, i) => { mh += `<div class="mood-item"><div class="mood-header"><div class="mood-avatar">${m.avatar||'👤'}</div><div><div class="mood-name">${m.name||'好友'}</div><div class="mood-type">${m.type==='diary'?'日记':'心情'}</div></div></div><div class="mood-content">${m.text}</div><div class="mood-footer"><span class="mood-date">${formatTime(m.time)}</span><div class="mood-actions"><span class="mood-action ${m.collected?'active':''}" onclick="toggleMoodCollect(${i})">${m.collected?'★ 已收藏':'☆ 收藏'}</span></div></div></div>`; });
+            const content = `<div class="section-header">心事簿（好友心情和日记，我不能发布）</div><div>${mh || '<div class="empty-state"><div class="empty-text">暂无心事</div></div>'}</div>`;
+            openSubPage('mood-book', '心事簿', content);
+        }
+        function toggleMoodCollect(i) {
+            appData.moodCards[i].collected = !appData.moodCards[i].collected;
+            saveData(); openMoodBook();
+        }
+
+        function openAppearance() {
+            const a = appData.settings.appearance;
+            const content = `<div class="section-header">全局背景</div>
+            <div class="input-area"><input type="text" id="global-bg" placeholder="输入背景图片 URL 或颜色" value="${a.globalBg||''}" style="width:100%;padding:12px;border:1px solid var(--separator);border-radius:10px;"><button class="btn-primary" onclick="saveGlobalBg()">保存</button></div>
+            <div class="section-header">字体大小</div>
+            <div class="slider-row"><div class="slider-label"><span>字号</span><span class="slider-value" id="global-font-val">${a.fontSize||16}px</span></div><input type="range" min="12" max="24" value="${a.fontSize||16}" oninput="updateGlobalFont(this.value)"></div>
+            <div class="section-header">保持在线</div>
+            <div class="settings-group"><div class="settings-item"><span class="settings-label">保持在线</span><div class="toggle ${appData.settings.keepOnline?'on':''}" onclick="toggleKeepOnline()"><div class="toggle-handle"></div></div></div></div>`;
+            openSubPage('appearance', '外观', content);
+        }
+        function saveGlobalBg() {
+            appData.settings.appearance.globalBg = document.getElementById('global-bg').value;
+            saveData(); showToast('已保存');
+        }
+        function updateGlobalFont(v) {
+            appData.settings.appearance.fontSize = parseInt(v);
+            document.getElementById('global-font-val').textContent = v + 'px';
+            document.body.style.fontSize = v + 'px';
+            saveData();
+        }
+        function toggleKeepOnline() {
+            appData.settings.keepOnline = !appData.settings.keepOnline;
+            saveData(); openAppearance();
+        }
+
+        function openLetters() {
+            let lh = '';
+            appData.letters.forEach((l, i) => { lh += `<div class="letter-item" onclick="viewLetter(${i})"><div class="letter-header"><div class="letter-avatar">${l.avatar||'✉️'}</div><div class="letter-from"><div class="letter-name">${l.from||'好友'}</div><div class="letter-type">${l.type==='reply'?'回信':'主动来信'}</div></div><span class="letter-date">${formatTime(l.time)}</span></div><div class="letter-content">${l.content.substring(0,50)}${l.content.length>50?'...':''}</div><div class="letter-actions"><span class="letter-action ${l.collected?'active':''}" onclick="event.stopPropagation();toggleLetterCollect(${i})">${l.collected?'★ 已收藏':'☆ 收藏'}</span></div></div>`; });
+            const content = `<div style="display:flex;gap:12px;margin-bottom:16px;"><button class="btn-primary" style="margin-top:0;" onclick="openWriteLetter()">✉️ 写信</button></div>
+            <div class="section-header">我收到的信</div><div>${lh || '<div class="empty-state"><div class="empty-text">暂无信件</div></div>'}</div>
+            <div class="section-header">收藏</div><div>${renderCollectedLetters()}</div>`;
+            openSubPage('letters', '见字如面', content);
+        }
+        function renderCollectedLetters() {
+            const collected = appData.letters.filter(l => l.collected);
+            if (!collected.length) return '<div class="empty-state"><div class="empty-text">暂无收藏</div></div>';
+            let h = '';
+            collected.forEach(l => { h += `<div class="letter-item"><div class="letter-header"><div class="letter-avatar">${l.avatar||'✉️'}</div><div class="letter-from"><div class="letter-name">${l.from||'好友'}</div></div><span class="letter-date">${formatTime(l.time)}</span></div><div class="letter-content">${l.content}</div></div>`; });
+            return h;
+        }
+        function viewLetter(i) {
+            const l = appData.letters[i];
+            const content = `<div class="letter-item"><div class="letter-header"><div class="letter-avatar">${l.avatar||'✉️'}</div><div class="letter-from"><div class="letter-name">${l.from||'好友'}</div><div class="letter-type">${l.type==='reply'?'回信':'主动来信'}</div></div></div><div style="margin:16px 0;padding:16px;background:var(--bg);border-radius:12px;"><div style="font-size:14px;color:var(--text-secondary);margin-bottom:8px;">信件内容</div><div style="font-size:16px;line-height:1.8;">${l.content}</div></div>
+            ${l.originalLetter ? `<div style="margin:16px 0;padding:16px;background:var(--bg);border-radius:12px;"><div style="font-size:14px;color:var(--text-secondary);margin-bottom:8px;">我当初寄出的信</div><div style="font-size:15px;line-height:1.6;">${l.originalLetter}</div></div>` : ''}
+            <div style="font-size:13px;color:var(--text-tertiary);">${new Date(l.time).toLocaleString()}</div></div>`;
+            openSubPage('view-letter', '信件详情', content);
+        }
+        function toggleLetterCollect(i) {
+            appData.letters[i].collected = !appData.letters[i].collected;
+            saveData(); openLetters();
+        }
+        function openWriteLetter() {
+            let opts = '<option value="">全局发送</option>';
+            appData.friends.forEach(f => { opts += `<option value="${f.id}">${f.remark}</option>`; });
+            const content = `<div class="input-area"><select id="letter-to" style="width:100%;padding:12px;border:1px solid var(--separator);border-radius:10px;font-size:16px;margin-bottom:12px;">${opts}</select>
+            <textarea id="letter-content" rows="6" placeholder="写信内容..." style="width:100%;padding:12px;border:1px solid var(--separator);border-radius:10px;font-size:16px;"></textarea>
+            <button class="btn-primary" onclick="sendLetter()">发送</button></div>`;
+            openSubPage('write-letter', '写信', content);
+        }
+        function sendLetter() {
+            const to = document.getElementById('letter-to').value;
+            const content = document.getElementById('letter-content').value.trim();
+            if (!content) { showToast('请输入内容'); return; }
+            const target = to ? appData.friends.find(f => f.id === to) : null;
+            appData.sentLetters.push({ to: target ? target.remark : '全局', content, time: Date.now() });
+            saveData(); showToast('信已寄出'); closeSubPage('sub-write-letter'); openLetters();
+        }
+
+        function backupAll() {
+            const data = JSON.stringify(appData, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'entwine_backup_' + new Date().toISOString().slice(0,10) + '.json';
+            a.click();
+            showToast('已导出备份文件');
+        }
+        function backupChats() {
+            const chats = JSON.stringify(appData.chats, null, 2);
+            const blob = new Blob([chats], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'entwine_chats_' + new Date().toISOString().slice(0,10) + '.json';
+            a.click();
+            showToast('已导出聊天记录');
+        }
+        function resetAll() {
+            if (!confirm('确定要重置所有数据吗？此操作不可恢复！')) return;
+            if (!confirm('再次确认：所有好友、聊天记录、设置都将被清空！')) return;
+            if (!confirm('最后一次确认：你真的要重置吗？')) return;
+            localStorage.removeItem(DB_KEY);
+            location.reload();
+        }
+
+        function renderMoments() {
+            const list = document.getElementById('moments-list');
+            if (!appData.moments.length) {
+                list.innerHTML = '<div class="empty-state"><div class="empty-icon">🌈</div><div class="empty-text">暂无朋友圈动态</div></div>';
+                return;
+            }
+            let html = '';
+            appData.moments.forEach((m, i) => {
+                const f = appData.friends.find(x => x.id === m.from);
+                const name = m.from === 'me' ? appData.myProfile.name : (f ? f.remark : '好友');
+                const avatar = m.from === 'me' ? appData.myProfile.avatar : (f ? f.avatar : '👤');
+                const mood = m.mood ? `<span class="moment-mood">[${m.mood}]</span>` : '';
+                const liked = m.likes && m.likes.includes('me');
+                const collected = m.collected;
+                html += `<div class="moment-item" id="moment-${i}">
+                    <div class="moment-header"><div class="moment-avatar">${avatar}</div><div><div class="moment-name">${name}</div>${mood}</div></div>
+                    <div class="moment-content">${m.text}</div>
+                    ${m.images && m.images.length ? `<div class="moment-images">${m.images.map(img => `<div class="moment-image"><img src="${img}"></div>`).join('')}</div>` : ''}
+                    <div class="moment-footer"><span class="moment-date">${formatMomentDate(m.time)}</span><div class="moment-actions">
+                        <span class="moment-action ${liked?'active':''}" onclick="toggleMomentLike(${i})">${liked?'❤️':'🤍'} ${m.likes?m.likes.length:0}</span>
+                        <span class="moment-action" onclick="toggleMomentComments(${i})">💬 ${m.comments?m.comments.length:0}</span>
+                        <span class="moment-action ${collected?'active':''}" onclick="toggleMomentCollect(${i})">${collected?'★':'☆'}</span>
+                    </div></div>
+                    <div class="comments-section" id="comments-${i}" style="display:none;">
+                        ${m.comments ? m.comments.map((c, ci) => `<div class="comment-item"><div class="comment-avatar">${c.avatar||'👤'}</div><div class="comment-content"><div class="comment-name">${c.name}</div><div class="comment-text">${c.text}</div></div></div>`).join('') : ''}
+                        <div class="comment-input-row"><input type="text" class="comment-input" id="comment-input-${i}" placeholder="评论..."><button class="comment-send" onclick="addMomentComment(${i})">发送</button></div>
+                    </div>
+                </div>`;
+            });
+            list.innerHTML = html;
+        }
+        function formatMomentDate(ts) {
+            const d = new Date(ts), now = new Date();
+            const isNewYear = d.getFullYear() !== now.getFullYear();
+            if (isNewYear && d.getMonth() === 0 && d.getDate() <= 7) return d.getFullYear() + '年' + (d.getMonth()+1) + '月' + d.getDate() + '日';
+            return (d.getMonth()+1) + '月' + d.getDate() + '日';
+        }
+        function toggleMomentLike(i) {
+            if (!appData.moments[i].likes) appData.moments[i].likes = [];
+            const idx = appData.moments[i].likes.indexOf('me');
+            if (idx > -1) appData.moments[i].likes.splice(idx, 1);
+            else appData.moments[i].likes.push('me');
+            saveData(); renderMoments();
+        }
+        function toggleMomentCollect(i) {
+            appData.moments[i].collected = !appData.moments[i].collected;
+            saveData(); renderMoments();
+        }
+        function toggleMomentComments(i) {
+            const el = document.getElementById('comments-' + i);
+            el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        }
+        function addMomentComment(i) {
+            const inp = document.getElementById('comment-input-' + i);
+            const t = inp.value.trim();
+            if (!t) return;
+            if (!appData.moments[i].comments) appData.moments[i].comments = [];
+            appData.moments[i].comments.push({ name: appData.myProfile.name, avatar: appData.myProfile.avatar, text: t, time: Date.now() });
+            saveData(); renderMoments();
+            document.getElementById('comments-' + i).style.display = 'block';
+        }
+
+        function openMyProfile() {
+            const p = appData.myProfile;
+            const moments = appData.myMoments || [];
+            let mh = '';
+            moments.forEach((m, i) => { mh += `<div class="moment-item"><div class="moment-content">${m.text}</div>${m.images && m.images.length ? `<div class="moment-images">${m.images.map(img => `<div class="moment-image"><img src="${img}"></div>`).join('')}</div>` : ''}<div class="moment-footer"><span class="moment-date">${formatMomentDate(m.time)}</span><div class="moment-actions"><span class="moment-action" onclick="deleteMyMoment(${i})">删除</span></div></div></div>`; });
+            const content = `<div class="profile-header">
+                <div class="profile-top"><div class="profile-avatar-large">${p.avatar}</div><div class="profile-stats">
+                    <div class="stat-item"><div class="stat-number">${moments.length}</div><div class="stat-label">动态</div></div>
+                    <div class="stat-item"><div class="stat-number">0</div><div class="stat-label">粉丝</div></div>
+                    <div class="stat-item"><div class="stat-number">${appData.friends.length}</div><div class="stat-label">关注</div></div>
+                </div></div>
+                <div class="profile-info"><div class="profile-name">${p.name}</div><div class="profile-id">${p.id}</div>${p.bio?`<div class="profile-bio">${p.bio}</div>`:''}${p.region?`<div class="profile-bio">📍 ${p.region}</div>`:''}${p.status?`<div class="profile-bio">${p.status}</div>`:''}</div>
+                <div class="profile-actions"><button class="profile-btn" onclick="openEditProfile()">编辑主页</button><button class="profile-btn primary" onclick="openPublishMoment()">发布动态</button></div>
+            </div>
+            <div class="section-header">我的动态</div>${mh || '<div class="empty-state"><div class="empty-text">暂无动态</div></div>'}`;
+            openSubPage('my-profile', '我的主页', content);
+        }
+        function openEditProfile() {
+            const p = appData.myProfile;
+            const content = `<div class="input-area">
+                <input type="text" id="edit-avatar" placeholder="头像 emoji" value="${p.avatar}" style="width:100%;padding:12px;border:1px solid var(--separator);border-radius:10px;margin-bottom:12px;">
+                <input type="text" id="edit-name" placeholder="名字" value="${p.name}" style="width:100%;padding:12px;border:1px solid var(--separator);border-radius:10px;margin-bottom:12px;">
+                <input type="text" id="edit-id" placeholder="ID" value="${p.id}" style="width:100%;padding:12px;border:1px solid var(--separator);border-radius:10px;margin-bottom:12px;">
+                <textarea id="edit-bio" placeholder="个性签名" rows="2" style="width:100%;padding:12px;border:1px solid var(--separator);border-radius:10px;margin-bottom:12px;">${p.bio}</textarea>
+                <input type="text" id="edit-region" placeholder="地区" value="${p.region}" style="width:100%;padding:12px;border:1px solid var(--separator);border-radius:10px;margin-bottom:12px;">
+                <input type="text" id="edit-status" placeholder="状态" value="${p.status}" style="width:100%;padding:12px;border:1px solid var(--separator);border-radius:10px;margin-bottom:12px;">
+                <button class="btn-primary" onclick="saveProfile()">保存</button>
+            </div>`;
+            openSubPage('edit-profile', '编辑主页', content);
+        }
+        function saveProfile() {
+            appData.myProfile.avatar = document.getElementById('edit-avatar').value || '👤';
+            appData.myProfile.name = document.getElementById('edit-name').value || '我';
+            appData.myProfile.id = document.getElementById('edit-id').value || '@me';
+            appData.myProfile.bio = document.getElementById('edit-bio').value;
+            appData.myProfile.region = document.getElementById('edit-region').value;
+            appData.myProfile.status = document.getElementById('edit-status').value;
+            saveData(); showToast('已保存'); closeSubPage('sub-edit-profile'); openMyProfile();
+        }
+        function openPublishMoment() {
+            const content = `<div class="input-area">
+                <input type="text" id="moment-mood" placeholder="心情（可选）" style="width:100%;padding:12px;border:1px solid var(--separator);border-radius:10px;margin-bottom:12px;">
+                <textarea id="moment-text" rows="4" placeholder="分享此刻..." style="width:100%;padding:12px;border:1px solid var(--separator);border-radius:10px;margin-bottom:12px;"></textarea>
+                <div class="image-upload"><div class="image-add" onclick="document.getElementById('moment-img-input').click()">+</div></div>
+                <input type="file" id="moment-img-input" accept="image/*" multiple style="display:none;" onchange="previewMomentImages(this)">
+                <div id="moment-img-preview"></div>
+                <button class="btn-primary" onclick="publishMoment()">发布</button>
+            </div>`;
+            openSubPage('publish-moment', '发布动态', content);
+            window.momentImages = [];
+        }
+        function previewMomentImages(input) {
+            window.momentImages = [];
+            const preview = document.getElementById('moment-img-preview');
+            preview.innerHTML = '';
+            Array.from(input.files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    window.momentImages.push(e.target.result);
+                    preview.innerHTML += `<div class="image-preview"><img src="${e.target.result}"></div>`;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+        function publishMoment() {
+            const mood = document.getElementById('moment-mood').value.trim();
+            const text = document.getElementById('moment-text').value.trim();
+            if (!text && !window.momentImages.length) { showToast('请输入内容'); return; }
+            const moment = { from: 'me', mood, text, images: window.momentImages, time: Date.now(), likes: [], comments: [] };
+            appData.myMoments.push(moment);
+            appData.moments.unshift(moment);
+            saveData(); showToast('已发布'); closeSubPage('sub-publish-moment'); switchPage('moments');
+        }
+        function deleteMyMoment(i) {
+            if (!confirm('确定删除这条动态吗？')) return;
+            const m = appData.myMoments[i];
+            appData.myMoments.splice(i, 1);
+            const idx = appData.moments.indexOf(m);
+            if (idx > -1) appData.moments.splice(idx, 1);
+            saveData(); openMyProfile();
+        }
+
+        function renderDiary() {
+            const c = document.getElementById('diary-content');
+            const p = appData.diaryProfile;
+            const diaries = appData.diaries || [];
+            let totalLikes = 0;
+            diaries.forEach(d => totalLikes += d.likes ? d.likes.length : 0);
+            let dh = '';
+            diaries.forEach((d, i) => {
+                const liked = d.likes && d.likes.includes('me');
+                dh += `<div class="diary-item" onclick="openDiaryDetail(${i})"><div class="diary-content">${d.text}</div><div class="diary-footer"><span class="diary-date">${formatTime(d.time)}</span><div class="diary-actions">
+                    <span class="diary-action ${liked?'active':''}" onclick="event.stopPropagation();toggleDiaryLike(${i})">${liked?'❤️':'🤍'} ${d.likes?d.likes.length:0}</span>
+                    <span class="diary-action" onclick="event.stopPropagation();toggleDiaryNote(${i})">💌 ${d.notes?d.notes.length:0}</span>
+                    <span class="diary-action ${d.collected?'active':''}" onclick="event.stopPropagation();toggleDiaryCollect(${i})">${d.collected?'★':'☆'}</span>
+                </div></div></div>`;
+            });
+            c.innerHTML = `<div class="diary-header"><div class="diary-bg" style="${p.bg?`background:url(${p.bg});background-size:cover;`:''}"></div>
+                <div class="diary-profile"><div class="diary-avatar"><div class="diary-avatar-inner">${p.avatar}</div></div>
+                <div class="diary-info"><div class="diary-name">${p.name}</div><div class="diary-id">${p.id}</div></div>
+                <button class="profile-btn" style="width:auto;padding:6px 16px;" onclick="openEditDiaryProfile()">编辑资料</button></div></div>
+            <div class="diary-stats"><div class="diary-stat"><div class="diary-stat-num">${diaries.length}</div><div class="diary-stat-label">日记</div></div>
+                <div class="diary-stat"><div class="diary-stat-num">${totalLikes}</div><div class="diary-stat-label">被喜欢</div></div></div>
+            <div style="padding:16px;"><button class="btn-primary" onclick="openPublishDiary()">✏️ 写日记</button></div>
+            ${dh || '<div class="empty-state"><div class="empty-icon">📖</div><div class="empty-text">暂无日记</div></div>'}`;
+        }
+        function toggleDiaryLike(i) {
+            if (!appData.diaries[i].likes) appData.diaries[i].likes = [];
+            const idx = appData.diaries[i].likes.indexOf('me');
+            if (idx > -1) appData.diaries[i].likes.splice(idx, 1);
+            else appData.diaries[i].likes.push('me');
+            saveData(); renderDiary();
+        }
+        function toggleDiaryNote(i) {
+            const note = prompt('写小纸条：');
+            if (!note) return;
+            if (!appData.diaries[i].notes) appData.diaries[i].notes = [];
+            appData.diaries[i].notes.push({ text: note, time: Date.now() });
+            saveData(); renderDiary(); showToast('纸条已送出');
+        }
+        function toggleDiaryCollect(i) {
+            appData.diaries[i].collected = !appData.diaries[i].collected;
+            saveData(); renderDiary();
+        }
+        function openDiaryDetail(i) {
+            const d = appData.diaries[i];
+            const content = `<div class="diary-item"><div class="diary-content" style="font-size:17px;">${d.text}</div>
+                <div style="font-size:13px;color:var(--text-tertiary);margin-bottom:16px;">${new Date(d.time).toLocaleString()}</div>
+                ${d.notes && d.notes.length ? `<div class="section-header">小纸条</div>${d.notes.map(n => `<div style="background:var(--bg);padding:12px;border-radius:10px;margin-bottom:8px;font-size:14px;">${n.text}</div>`).join('')}` : ''}
+                <div class="section-header">评论区</div>
+                <div id="diary-comments">${d.comments ? d.comments.map((cm, ci) => `<div class="comment-item"><div class="comment-avatar">${cm.avatar||'👤'}</div><div class="comment-content"><div class="comment-name">${cm.name}</div><div class="comment-text">${cm.text}</div></div></div>`).join('') : '<div style="font-size:14px;color:var(--text-tertiary);padding:12px 0;">暂无评论</div>'}</div>
+                <div class="comment-input-row"><input type="text" class="comment-input" id="diary-comment-input" placeholder="评论..."><button class="comment-send" onclick="addDiaryComment(${i})">发送</button></div>
+            </div>`;
+            openSubPage('diary-detail', '日记详情', content);
+        }
+        function addDiaryComment(i) {
+            const inp = document.getElementById('diary-comment-input');
+            const t = inp.value.trim();
+            if (!t) return;
+            if (!appData.diaries[i].comments) appData.diaries[i].comments = [];
+            appData.diaries[i].comments.push({ name: appData.myProfile.name, avatar: appData.myProfile.avatar, text: t, time: Date.now() });
+            saveData(); openDiaryDetail(i);
+        }
+        function openPublishDiary() {
+            const content = `<div class="input-area">
+                <textarea id="diary-text" rows="6" placeholder="记录今天..." maxlength="200" style="width:100%;padding:12px;border:1px solid var(--separator);border-radius:10px;font-size:16px;"></textarea>
+                <div style="font-size:12px;color:var(--text-tertiary);text-align:right;margin-top:4px;"><span id="diary-char-count">0</span>/200</div>
+                <button class="btn-primary" onclick="publishDiary()">发布</button>
+            </div>`;
+            openSubPage('publish-diary', '写日记', content);
+            document.getElementById('diary-text').addEventListener('input', function() {
+                document.getElementById('diary-char-count').textContent = this.value.length;
+            });
+        }
+        function publishDiary() {
+            const t = document.getElementById('diary-text').value.trim();
+            if (!t) { showToast('请输入内容'); return; }
+            appData.diaries.unshift({ text: t, time: Date.now(), likes: [], notes: [], comments: [] });
+            saveData(); showToast('日记已发布'); closeSubPage('sub-publish-diary'); renderDiary();
+        }
+        function openEditDiaryProfile() {
+            const p = appData.diaryProfile;
+            const content = `<div class="input-area">
+                <input type="text" id="diary-edit-avatar" placeholder="头像 emoji" value="${p.avatar}" style="width:100%;padding:12px;border:1px solid var(--separator);border-radius:10px;margin-bottom:12px;">
+                <input type="text" id="diary-edit-name" placeholder="名字" value="${p.name}" style="width:100%;padding:12px;border:1px solid var(--separator);border-radius:10px;margin-bottom:12px;">
+                <input type="text" id="diary-edit-id" placeholder="ID" value="${p.id}" style="width:100%;padding:12px;border:1px solid var(--separator);border-radius:10px;margin-bottom:12px;">
+                <input type="text" id="diary-edit-region" placeholder="地区" value="${p.region}" style="width:100%;padding:12px;border:1px solid var(--separator);border-radius:10px;margin-bottom:12px;">
+                <input type="text" id="diary-edit-bg" placeholder="背景图 URL（可选）" value="${p.bg}" style="width:100%;padding:12px;border:1px solid var(--separator);border-radius:10px;margin-bottom:12px;">
+                <button class="btn-primary" onclick="saveDiaryProfile()">保存</button>
+            </div>`;
+            openSubPage('edit-diary-profile', '编辑资料', content);
+        }
+        function saveDiaryProfile() {
+            appData.diaryProfile.avatar = document.getElementById('diary-edit-avatar').value || '👤';
+            appData.diaryProfile.name = document.getElementById('diary-edit-name').value || '我';
+            appData.diaryProfile.id = document.getElementById('diary-edit-id').value || '@me';
+            appData.diaryProfile.region = document.getElementById('diary-edit-region').value;
+            appData.diaryProfile.bg = document.getElementById('diary-edit-bg').value;
+            saveData(); showToast('已保存'); closeSubPage('sub-edit-diary-profile'); renderDiary();
+        }
+
+        // 初始化
+        if (appData.loggedIn) {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('main-app').style.display = 'block';
+            initApp();
+        }
+    </script>
+</body>
+</html>
