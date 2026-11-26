@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>Entwine</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        :root {
+            --bg: #F2F2F7; --card: #FFFFFF; --text: #000000; --text2: #8E8E93;
+            --primary: #007AFF; --separator: #E5E5EA; --danger: #FF3B30; --success: #34C759;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg); color: var(--text); overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* 登录页 */
+        #login-screen {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--bg); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 1000;
+        }
+        .login-logo { font-size: 32px; font-weight: 600; margin-bottom: 40px; letter-spacing: 2px; }
+        .login-input-wrap { width: 280px; margin-bottom: 20px; }
+        .login-input {
+            width: 100%; padding: 16px 20px; border: 1px solid var(--separator);
+            border-radius: 12px; font-size: 17px; text-align: center; background: var(--card);
+            outline: none; -webkit-appearance: none;
+        }
+        .login-input:focus { border-color: var(--primary); }
+        .login-btn {
+            width: 280px; padding: 16px; background: var(--primary); color: white;
+            border: none; border-radius: 12px; font-size: 17px; font-weight: 500;
+            cursor: pointer; -webkit-appearance: none;
+        }
+        .login-btn:active { opacity: 0.8; }
+        .login-error { color: var(--danger); font-size: 14px; margin-top: 12px; display: none; }
+
+        /* 主应用 */
+        #main-app { display: none; padding-bottom: 80px; min-height: 100vh; }
+
+        /* 底部导航 */
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; right: 0; height: 60px;
+            background: rgba(255,255,255,0.95); backdrop-filter: blur(20px);
+            border-top: 1px solid var(--separator); display: flex; z-index: 100;
+        }
+        .nav-item {
+            flex: 1; display: flex; flex-direction: column; align-items: center;
+            justify-content: center; color: var(--text2); font-size: 10px; cursor: pointer;
+        }
+        .nav-item.active { color: var(--primary); }
+        .nav-item svg { width: 24px; height: 24px; margin-bottom: 2px; }
+
+        /* 页面 */
+        .page { display: none; padding: 16px; }
+        .page.active { display: block; }
+
+        /* 顶部导航栏 */
+        .page-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 16px; background: var(--card); border-bottom: 1px solid var(--separator);
+            position: sticky; top: 0; z-index: 50;
+        }
+        .page-title { font-size: 18px; font-weight: 600; }
+        .header-btn {
+            background: none; border: none; color: var(--primary); font-size: 16px; cursor: pointer;
+        }
+
+        /* 消息列表 */
+        .chat-list-item {
+            display: flex; align-items: center; padding: 12px 16px;
+            background: var(--card); border-bottom: 1px solid var(--separator); cursor: pointer;
+        }
+        .chat-avatar {
+            width: 48px; height: 48px; border-radius: 50%; background: var(--primary);
+            display: flex; align-items: center; justify-content: center; color: white;
+            font-size: 20px; margin-right: 12px; flex-shrink: 0;
+        }
+        .chat-info { flex: 1; min-width: 0; }
+        .chat-name { font-size: 16px; font-weight: 500; }
+        .chat-preview { font-size: 14px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chat-meta { text-align: right; flex-shrink: 0; }
+        .chat-time { font-size: 12px; color: var(--text2); }
+        .chat-badge {
+            display: inline-block; min-width: 18px; height: 18px; background: var(--danger);
+            color: white; border-radius: 9px; font-size: 12px; text-align: center; line-height: 18px;
+            margin-top: 4px;
+        }
+
+        /* 聊天页 */
+        .chat-page {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg);
+            z-index: 200; display: none; flex-direction: column;
+        }
+        .chat-header {
+            display: flex; align-items: center; padding: 12px 16px;
+            background: var(--card); border-bottom: 1px solid var(--separator);
+        }
+        .chat-back { font-size: 24px; margin-right: 12px; cursor: pointer; }
+        .chat-title { font-size: 17px; font-weight: 500; flex: 1; text-align: center; }
+        .chat-more { font-size: 20px; cursor: pointer; }
+        .chat-messages {
+            flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column;
+        }
+        .msg-row { display: flex; margin-bottom: 12px; align-items: flex-end; }
+        .msg-row.me { justify-content: flex-end; }
+        .msg-avatar {
+            width: 36px; height: 36px; border-radius: 50%; background: var(--primary);
+            display: flex; align-items: center; justify-content: center; color: white;
+            font-size: 16px; margin: 0 8px; flex-shrink: 0;
+        }
+        .msg-bubble {
+            max-width: 70%; padding: 10px 14px; border-radius: 18px; font-size: 15px;
+            word-break: break-word;
+        }
+        .msg-row:not(.me) .msg-bubble { background: var(--card); border: 1px solid var(--separator); }
+        .msg-row.me .msg-bubble { background: var(--primary); color: white; }
+        .msg-time { font-size: 11px; color: var(--text2); margin-top: 4px; text-align: right; }
+        .chat-input-area {
+            display: flex; align-items: center; padding: 8px 12px;
+            background: var(--card); border-top: 1px solid var(--separator); gap: 8px;
+        }
+        .chat-input {
+            flex: 1; padding: 10px 14px; border: 1px solid var(--separator);
+            border-radius: 20px; font-size: 15px; outline: none; background: var(--bg);
+            -webkit-appearance: none;
+        }
+        .chat-send-btn {
+            width: 40px; height: 40px; background: var(--primary); color: white;
+            border: none; border-radius: 50%; font-size: 16px; cursor: pointer;
+            -webkit-appearance: none;
+        }
+        .chat-tools {
+            display: flex; gap: 16px; padding: 8px 16px; background: var(--card);
+            border-top: 1px solid var(--separator);
+        }
+        .chat-tool { font-size: 24px; cursor: pointer; }
+
+        /* 朋友圈 */
+        .moments-header {
+            position: relative; height: 200px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: -16px -16px 0;
+        }
+        .moments-profile {
+            display: flex; align-items: flex-end; padding: 0 16px;
+            margin-top: -40px; margin-bottom: 20px;
+        }
+        .moments-avatar {
+            width: 80px; height: 80px; border-radius: 8px; background: var(--card);
+            border: 2px solid white; display: flex; align-items: center; justify-content: center;
+            font-size: 36px; margin-right: 12px;
+        }
+        .moments-name { font-size: 18px; font-weight: 600; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+        .moment-item {
+            background: var(--card); padding: 16px; margin-bottom: 8px; border-radius: 12px;
+        }
+        .moment-header { display: flex; align-items: center; margin-bottom: 8px; }
+        .moment-avatar {
+            width: 40px; height: 40px; border-radius: 50%; background: var(--primary);
+            display: flex; align-items: center; justify-content: center; color: white;
+            font-size: 18px; margin-right: 10px;
+        }
+        .moment-user { font-size: 15px; font-weight: 500; }
+        .moment-content { font-size: 15px; line-height: 1.5; margin-bottom: 8px; }
+        .moment-actions {
+            display: flex; gap: 16px; font-size: 13px; color: var(--text2);
+        }
+        .moment-action { cursor: pointer; }
+        .moment-action.active { color: var(--primary); }
+
+        /* 日记 */
+        .diary-header {
+            text-align: center; padding: 40px 16px 20px;
+            background: linear-gradient(180deg, #f8f9fa 0%, var(--bg) 100%);
+            margin: -16px -16px 0;
+        }
+        .diary-avatar {
+            width: 80px; height: 80px; border-radius: 50%; background: var(--card);
+            margin: 0 auto 12px; display: flex; align-items: center; justify-content: center;
+            font-size: 40px; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .diary-name { font-size: 20px; font-weight: 600; }
+        .diary-id { font-size: 14px; color: var(--text2); }
+        .diary-item {
+            background: var(--card); padding: 16px; margin-bottom: 8px; border-radius: 12px;
+        }
+        .diary-date { font-size: 12px; color: var(--text2); margin-bottom: 8px; }
+        .diary-content { font-size: 15px; line-height: 1.6; }
+        .diary-actions {
+            display: flex; gap: 16px; margin-top: 12px; font-size: 13px; color: var(--text2);
+        }
+        .diary-action { cursor: pointer; }
+
+        /* 设置 */
+        .settings-group {
+            background: var(--card); border-radius: 12px; margin-bottom: 16px; overflow: hidden;
+        }
+        .settings-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 16px; border-bottom: 1px solid var(--separator); cursor: pointer;
+        }
+        .settings-item:last-child { border-bottom: none; }
+        .settings-label { font-size: 16px; }
+        .settings-value { font-size: 15px; color: var(--text2); }
+        .settings-arrow { font-size: 18px; color: var(--text2); }
+        .settings-header {
+            font-size: 13px; color: var(--text2); text-transform: uppercase;
+            padding: 8px 16px; font-weight: 500;
+        }
+
+        /* 子页面 */
+        .sub-page {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg);
+            z-index: 300; display: none; flex-direction: column;
+        }
+        .sub-page.active { display: flex; }
+        .sub-page-header {
+            display: flex; align-items: center; padding: 12px 16px;
+            background: var(--card); border-bottom: 1px solid var(--separator);
+        }
+        .sub-page-back { font-size: 24px; margin-right: 12px; cursor: pointer; }
+        .sub-page-title { font-size: 17px; font-weight: 500; flex: 1; }
+        .sub-page-content { flex: 1; overflow-y: auto; padding: 16px; }
+
+        /* 表单 */
+        .form-input {
+            width: 100%; padding: 12px 16px; border: 1px solid var(--separator);
+            border-radius: 10px; font-size: 16px; margin-bottom: 12px; outline: none;
+            background: var(--card); -webkit-appearance: none;
+        }
+        .form-btn {
+            width: 100%; padding: 14px; background: var(--primary); color: white;
+            border: none; border-radius: 12px; font-size: 17px; font-weight: 500;
+            cursor: pointer; -webkit-appearance: none;
+        }
+        .form-btn:active { opacity: 0.8; }
+
+        /* 卡片列表 */
+        .card-item {
+            background: var(--card); padding: 14px 16px; margin-bottom: 8px;
+            border-radius: 12px; display: flex; justify-content: space-between; align-items: center;
+        }
+        .card-text { font-size: 15px; flex: 1; }
+        .card-actions { display: flex; gap: 12px; }
+        .card-action { font-size: 18px; color: var(--text2); cursor: pointer; }
+
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.8); color: white; padding: 10px 20px;
+            border-radius: 20px; font-size: 14px; z-index: 500; display: none;
+        }
+
+        /* 遮罩 */
+        .overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 150; display: none;
+        }
+        .overlay.active { display: block; }
+
+        /* 底部弹出 */
+        .bottom-sheet {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: var(--card); border-radius: 16px 16px 0 0;
+            z-index: 200; transform: translateY(100%); transition: transform 0.3s;
+            max-height: 70vh; overflow-y: auto;
+        }
+        .bottom-sheet.active { transform: translateY(0); }
+        .sheet-item {
+            padding: 16px; text-align: center; font-size: 17px;
+            border-bottom: 1px solid var(--separator); cursor: pointer;
+        }
+        .sheet-item:last-child { border-bottom: none; }
+        .sheet-item.danger { color: var(--danger); }
+
+        /* 朋友圈发布 */
+        .publish-input {
+            width: 100%; min-height: 120px; padding: 16px; border: none;
+            font-size: 16px; resize: none; outline: none; background: var(--card);
+        }
+
+        /* 响应式 */
+        @media (max-width: 430px) {
+            .page { padding: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 登录页 -->
+    <div id="login-screen">
+        <div class="login-logo">Entwine</div>
+        <div class="login-input-wrap">
+            <input type="password" class="login-input" id="login-password" placeholder="请输入密码" maxlength="20">
+        </div>
+        <button class="login-btn" onclick="doLogin()">进入</button>
+        <div class="login-error" id="login-error">密码错误</div>
+    </div>
+
+    <!-- 主应用 -->
+    <div id="main-app">
+        <!-- 消息页 -->
+        <div class="page active" id="page-messages">
+            <div class="page-header">
+                <div class="page-title">消息</div>
+                <button class="header-btn" onclick="showAddFriend()">+</button>
+            </div>
+            <div id="chat-list"></div>
+        </div>
+
+        <!-- 朋友圈页 -->
+        <div class="page" id="page-moments">
+            <div class="moments-header"></div>
+            <div class="moments-profile">
+                <div class="moments-avatar" id="moments-avatar">👤</div>
+                <div class="moments-name" id="moments-name">我</div>
+            </div>
+            <div id="moments-list"></div>
+            <button class="form-btn" style="margin: 16px 0;" onclick="showPublishMoment()">发布动态</button>
+        </div>
+
+        <!-- 日记页 -->
+        <div class="page" id="page-diary">
+            <div class="diary-header">
+                <div class="diary-avatar" id="diary-avatar">👤</div>
+                <div class="diary-name" id="diary-name">我</div>
+                <div class="diary-id" id="diary-id">@me</div>
+            </div>
+            <div id="diary-list"></div>
+            <button class="form-btn" style="margin: 16px 0;" onclick="showWriteDiary()">写日记</button>
+        </div>
+
+        <!-- 设置页 -->
+        <div class="page" id="page-settings">
+            <div class="page-header">
+                <div class="page-title">设置</div>
+            </div>
+            <div class="settings-group">
+                <div class="settings-header">内容管理</div>
+                <div class="settings-item" onclick="showSubPage('word-cards')">
+                    <span class="settings-label">全局字卡</span>
+                    <span class="settings-arrow">›</span>
+                </div>
+                <div class="settings-item" onclick="showSubPage('emojis')">
+                    <span class="settings-label">全局表情</span>
+                    <span class="settings-arrow">›</span>
+                </div>
+                <div class="settings-item" onclick="showSubPage('pat-pat')">
+                    <span class="settings-label">拍一拍</span>
+                    <span class="settings-arrow">›</span>
+                </div>
+                <div class="settings-item" onclick="showSubPage('mood-book')">
+                    <span class="settings-label">心事簿</span>
+                    <span class="settings-arrow">›</span>
+                </div>
+                <div class="settings-item" onclick="showSubPage('reply-mgmt')">
+                    <span class="settings-label">回复管理</span>
+                    <span class="settings-arrow">›</span>
+                </div>
+            </div>
+            <div class="settings-group">
+                <div class="settings-header">外观</div>
+                <div class="settings-item" onclick="showSubPage('appearance')">
+                    <span class="settings-label">外观设置</span>
+                    <span class="settings-arrow">›</span>
+                </div>
+            </div>
+            <div class="settings-group">
+                <div class="settings-header">其他</div>
+                <div class="settings-item" onclick="showSubPage('mailbox')">
+                    <span class="settings-label">我的信箱</span>
+                    <span class="settings-arrow">›</span>
+                </div>
+                <div class="settings-item" onclick="showSubPage('data-mgmt')">
+                    <span class="settings-label">数据管理</span>
+                    <span class="settings-arrow">›</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部导航 -->
+    <div class="bottom-nav" id="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('messages')" data-tab="messages">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            <span>消息</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('moments')" data-tab="moments">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <path d="M21 15l-5-5L5 21"/>
+            </svg>
+            <span>朋友圈</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('diary')" data-tab="diary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            <span>日记</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('settings')" data-tab="settings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.68 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+            <span>设置</span>
+        </div>
+    </div>
+
+    <!-- 聊天页 -->
+    <div class="chat-page" id="chat-page">
+        <div class="chat-header">
+            <span class="chat-back" onclick="closeChat()">‹</span>
+            <span class="chat-title" id="chat-title">聊天</span>
+            <span class="chat-more" onclick="showChatMenu()">⋯</span>
+        </div>
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-tools">
+            <span class="chat-tool" onclick="showEmojiPicker()">😊</span>
+            <span class="chat-tool" onclick="showWordCards()">📝</span>
+            <span class="chat-tool" onclick="sendPat()">👋</span>
+            <span class="chat-tool" onclick="showPuzzleWords()">🧩</span>
+        </div>
+        <div class="chat-input-area">
+            <input type="text" class="chat-input" id="chat-input" placeholder="输入消息...">
+            <button class="chat-send-btn" onclick="sendMessage()">➤</button>
+        </div>
+    </div>
+
+    <!-- 底部弹出 -->
+    <div class="overlay" id="overlay" onclick="closeBottomSheet()"></div>
+    <div class="bottom-sheet" id="bottom-sheet"></div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- 子页面：字卡管理 -->
+    <div class="sub-page" id="sub-page-word-cards">
+        <div class="sub-page-header">
+            <span class="sub-page-back" onclick="closeSubPage()">‹</span>
+            <span class="sub-page-title">全局字卡</span>
+            <span class="header-btn" onclick="showAddCard()">+</span>
+        </div>
+        <div class="sub-page-content">
+            <div id="word-cards-list"></div>
+        </div>
+    </div>
+
+    <!-- 子页面：表情管理 -->
+    <div class="sub-page" id="sub-page-emojis">
+        <div class="sub-page-header">
+            <span class="sub-page-back" onclick="closeSubPage()">‹</span>
+            <span class="sub-page-title">全局表情</span>
+            <span class="header-btn" onclick="showAddEmoji()">+</span>
+        </div>
+        <div class="sub-page-content">
+            <div id="emojis-list"></div>
+        </div>
+    </div>
+
+    <!-- 子页面：拍一拍 -->
+    <div class="sub-page" id="sub-page-pat-pat">
+        <div class="sub-page-header">
+            <span class="sub-page-back" onclick="closeSubPage()">‹</span>
+            <span class="sub-page-title">拍一拍</span>
+            <span class="header-btn" onclick="showAddPat()">+</span>
+        </div>
+        <div class="sub-page-content">
+            <div id="pat-list"></div>
+        </div>
+    </div>
+
+    <!-- 子页面：心事簿 -->
+    <div class="sub-page" id="sub-page-mood-book">
+        <div class="sub-page-header">
+            <span class="sub-page-back" onclick="closeSubPage()">‹</span>
+            <span class="sub-page-title">心事簿</span>
+            <span class="header-btn" onclick="showAddMood()">+</span>
+        </div>
+        <div class="sub-page-content">
+            <div id="mood-list"></div>
+        </div>
+    </div>
+
+    <!-- 子页面：回复管理 -->
+    <div class="sub-page" id="sub-page-reply-mgmt">
+        <div class="sub-page-header">
+            <span class="sub-page-back" onclick="closeSubPage()">‹</span>
+            <span class="sub-page-title">回复管理</span>
+            <span class="header-btn" onclick="showAddReply()">+</span>
+        </div>
+        <div class="sub-page-content">
+            <div id="reply-list"></div>
+        </div>
+    </div>
+
+    <!-- 子页面：外观 -->
+    <div class="sub-page" id="sub-page-appearance">
+        <div class="sub-page-header">
+            <span class="sub-page-back" onclick="closeSubPage()">‹</span>
+            <span class="sub-page-title">外观设置</span>
+        </div>
+        <div class="sub-page-content">
+            <div class="settings-group">
+                <div class="settings-item">
+                    <span class="settings-label">全局背景</span>
+                    <input type="color" id="bg-color" onchange="changeBg(this.value)">
+                </div>
+                <div class="settings-item">
+                    <span class="settings-label">字体大小</span>
+                    <input type="range" id="font-size" min="12" max="24" value="16" onchange="changeFontSize(this.value)">
+                </div>
+                <div class="settings-item">
+                    <span class="settings-label">气泡大小</span>
+                    <input type="range" id="bubble-size" min="0.8" max="1.5" step="0.1" value="1" onchange="changeBubbleSize(this.value)">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 子页面：信箱 -->
+    <div class="sub-page" id="sub-page-mailbox">
+        <div class="sub-page-header">
+            <span class="sub-page-back" onclick="closeSubPage()">‹</span>
+            <span class="sub-page-title">我的信箱</span>
+        </div>
+        <div class="sub-page-content">
+            <div id="mailbox-list"></div>
+        </div>
+    </div>
+
+    <!-- 子页面：数据管理 -->
+    <div class="sub-page" id="sub-page-data-mgmt">
+        <div class="sub-page-header">
+            <span class="sub-page-back" onclick="closeSubPage()">‹</span>
+            <span class="sub-page-title">数据管理</span>
+        </div>
+        <div class="sub-page-content">
+            <button class="form-btn" style="margin-bottom: 12px;" onclick="exportData()">导出数据</button>
+            <button class="form-btn" style="margin-bottom: 12px; background: var(--danger);" onclick="importData()">导入数据</button>
+            <button class="form-btn" style="background: var(--danger);" onclick="clearAllData()">清除所有数据</button>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 数据管理 ====================
+        const DB_KEY = 'entwine_data';
+
+        function getDefaultData() {
+            return {
+                password: 'Hanxlqxzyfz',
+                loggedIn: false,
+                friends: [
+                    { id: 'f1', name: '小A', avatar: '👩' },
+                    { id: 'f2', name: '小B', avatar: '👨' },
+                    { id: 'f3', name: '群聊1', avatar: '👥', isGroup: true }
+                ],
+                chats: {},
+                globalCards: ['你好', '在吗', '想你了', '晚安', '早安'],
+                globalEmojis: ['😊', '😂', '🥰', '😢', '😡', '👍', '👎', '❤️'],
+                globalPats: ['拍了拍你', '摸了摸头', '捏了捏脸', '抱了抱你'],
+                replyManagement: ['好的', '知道了', '嗯嗯', '哈哈', '确实'],
+                moodCards: ['今天很开心', '有点累', '想静静', '充满希望'],
+                letters: [],
+                sentLetters: [],
+                moments: [
+                    { id: 1, user: '小A', avatar: '👩', content: '今天天气真好 ☀️', time: '2小时前', likes: 5, liked: false, comments: [] },
+                    { id: 2, user: '小B', avatar: '👨', content: '吃了好吃的 🍜', time: '5小时前', likes: 3, liked: false, comments: [] }
+                ],
+                myMoments: [],
+                myProfile: { avatar: '👤', name: '我', id: '@me', bio: '', region: '', status: '' },
+                diaryProfile: { avatar: '👤', name: '我', id: '@me', region: '', bg: '' },
+                diaries: [
+                    { id: 1, content: '今天是很特别的一天...', date: '2026-11-26', likes: 0, liked: false, comments: [], notes: [] },
+                    { id: 2, content: '记录一下此刻的心情', date: '2026-11-25', likes: 2, liked: false, comments: [], notes: [] }
+                ],
+                settings: { appearance: { globalBg: '', fontSize: 16, bubbleSize: 1 }, keepOnline: false },
+                archives: [],
+                collections: []
+            };
+        }
+
+        function loadData() {
+            try {
+                const raw = localStorage.getItem(DB_KEY);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    return Object.assign(getDefaultData(), parsed);
+                }
+            } catch(e) { console.error('Load error', e); }
+            return getDefaultData();
+        }
+
+        function saveData() {
+            try { localStorage.setItem(DB_KEY, JSON.stringify(appData)); } catch(e) {}
+        }
+
+        let appData = loadData();
+        let currentChatId = null;
+        let currentSubPage = null;
+
+        // ==================== 登录 ====================
+        function doLogin() {
+            const pwd = document.getElementById('login-password').value;
+            if (pwd === appData.password) {
+                appData.loggedIn = true;
+                saveData();
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('main-app').style.display = 'block';
+                initApp();
+            } else {
+                document.getElementById('login-error').style.display = 'block';
+            }
+        }
+
+        document.getElementById('login-password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') doLogin();
+        });
+
+        // ==================== 初始化 ====================
+        function initApp() {
+            renderChatList();
+            renderMoments();
+            renderDiaries();
+            renderSettings();
+            applyAppearance();
+        }
+
+        if (appData.loggedIn) {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('main-app').style.display = 'block';
+            initApp();
+        }
+
+        // ==================== 页面切换 ====================
+        function switchTab(tab) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('page-' + tab).classList.add('active');
+            document.querySelector('.nav-item[data-tab="' + tab + '"]').classList.add('active');
+        }
+
+        // ==================== 消息列表 ====================
+        function renderChatList() {
+            const list = document.getElementById('chat-list');
+            if (!list) return;
+            let html = '';
+            appData.friends.forEach(friend => {
+                const chat = appData.chats[friend.id] || { messages: [] };
+                const lastMsg = chat.messages.length > 0 ? chat.messages[chat.messages.length - 1] : null;
+                const preview = lastMsg ? (lastMsg.type === 'text' ? lastMsg.content : '[图片]') : '暂无消息';
+                const time = lastMsg ? formatTime(lastMsg.time) : '';
+                const unread = chat.unread || 0;
+                html += '<div class="chat-list-item" onclick="openChat('' + friend.id + '')">' +
+                    '<div class="chat-avatar">' + friend.avatar + '</div>' +
+                    '<div class="chat-info">' +
+                        '<div class="chat-name">' + friend.name + '</div>' +
+                        '<div class="chat-preview">' + preview + '</div>' +
+                    '</div>' +
+                    '<div class="chat-meta">' +
+                        '<div class="chat-time">' + time + '</div>' +
+                        (unread > 0 ? '<span class="chat-badge">' + unread + '</span>' : '') +
+                    '</div>' +
+                '</div>';
+            });
+            list.innerHTML = html;
+        }
+
+        function formatTime(ts) {
+            if (!ts) return '';
+            const d = new Date(ts);
+            return d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0');
+        }
+
+        // ==================== 聊天 ====================
+        function openChat(friendId) {
+            currentChatId = friendId;
+            const friend = appData.friends.find(f => f.id === friendId);
+            document.getElementById('chat-title').textContent = friend ? friend.name : '聊天';
+            document.getElementById('chat-page').style.display = 'flex';
+            renderMessages();
+            if (appData.chats[friendId]) appData.chats[friendId].unread = 0;
+            saveData();
+            renderChatList();
+        }
+
+        function closeChat() {
+            document.getElementById('chat-page').style.display = 'none';
+            currentChatId = null;
+        }
+
+        function renderMessages() {
+            const container = document.getElementById('chat-messages');
+            if (!container || !currentChatId) return;
+            const chat = appData.chats[currentChatId] || { messages: [] };
+            let html = '';
+            chat.messages.forEach(msg => {
+                const isMe = msg.from === 'me';
+                const friend = appData.friends.find(f => f.id === currentChatId);
+                const avatar = isMe ? '👤' : (friend ? friend.avatar : '👤');
+                html += '<div class="msg-row ' + (isMe ? 'me' : '') + '">' +
+                    (!isMe ? '<div class="msg-avatar">' + avatar + '</div>' : '') +
+                    '<div>' +
+                        '<div class="msg-bubble">' + msg.content + '</div>' +
+                        '<div class="msg-time">' + formatTime(msg.time) + '</div>' +
+                    '</div>' +
+                    (isMe ? '<div class="msg-avatar">' + avatar + '</div>' : '') +
+                '</div>';
+            });
+            container.innerHTML = html;
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text || !currentChatId) return;
+
+            if (!appData.chats[currentChatId]) appData.chats[currentChatId] = { messages: [], unread: 0 };
+            appData.chats[currentChatId].messages.push({
+                from: 'me', type: 'text', content: text, time: Date.now()
+            });
+            input.value = '';
+            saveData();
+            renderMessages();
+            renderChatList();
+
+            // 模拟回复
+            setTimeout(() => simulateReply(), 1000 + Math.random() * 2000);
+        }
+
+        document.getElementById('chat-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        function simulateReply() {
+            if (!currentChatId) return;
+            const replies = appData.replyManagement.length > 0 ? appData.replyManagement : ['好的', '嗯嗯', '哈哈'];
+            const reply = replies[Math.floor(Math.random() * replies.length)];
+            appData.chats[currentChatId].messages.push({
+                from: 'friend', type: 'text', content: reply, time: Date.now()
+            });
+            saveData();
+            renderMessages();
+            renderChatList();
+        }
+
+        // ==================== 聊天工具 ====================
+        function showEmojiPicker() {
+            const emojis = appData.globalEmojis;
+            let html = '';
+            emojis.forEach(emoji => {
+                html += '<div class="sheet-item" onclick="sendEmoji('' + emoji + '')">' + emoji + '</div>';
+            });
+            showBottomSheet(html);
+        }
+
+        function sendEmoji(emoji) {
+            if (!currentChatId) return;
+            if (!appData.chats[currentChatId]) appData.chats[currentChatId] = { messages: [], unread: 0 };
+            appData.chats[currentChatId].messages.push({
+                from: 'me', type: 'emoji', content: emoji, time: Date.now()
+            });
+            saveData();
+            renderMessages();
+            renderChatList();
+            closeBottomSheet();
+        }
+
+        function showWordCards() {
+            const cards = appData.globalCards;
+            let html = '';
+            cards.forEach((card, idx) => {
+                html += '<div class="sheet-item" onclick="sendWordCard(' + idx + ')">' + card + '</div>';
+            });
+            showBottomSheet(html);
+        }
+
+        function sendWordCard(idx) {
+            if (!currentChatId) return;
+            const card = appData.globalCards[idx];
+            if (!appData.chats[currentChatId]) appData.chats[currentChatId] = { messages: [], unread: 0 };
+            appData.chats[currentChatId].messages.push({
+                from: 'me', type: 'text', content: card, time: Date.now()
+            });
+            saveData();
+            renderMessages();
+            renderChatList();
+            closeBottomSheet();
+        }
+
+        function sendPat() {
+            if (!currentChatId) return;
+            const pats = appData.globalPats;
+            const pat = pats[Math.floor(Math.random() * pats.length)];
+            if (!appData.chats[currentChatId]) appData.chats[currentChatId] = { messages: [], unread: 0 };
+            appData.chats[currentChatId].messages.push({
+                from: 'me', type: 'pat', content: pat, time: Date.now()
+            });
+            saveData();
+            renderMessages();
+            renderChatList();
+            showToast('拍了拍');
+        }
+
+        function showPuzzleWords() {
+            const cards = appData.globalCards;
+            let html = '<div style="padding: 16px;">';
+            html += '<p style="margin-bottom: 12px;">选择文字组合：</p>';
+            cards.forEach((card, idx) => {
+                html += '<label style="display: block; margin-bottom: 8px; cursor: pointer;">' +
+                    '<input type="checkbox" value="' + idx + '" class="puzzle-check"> ' + card +
+                '</label>';
+            });
+            html += '<button class="form-btn" style="margin-top: 12px;" onclick="sendPuzzle()">发送</button>';
+            html += '</div>';
+            showBottomSheet(html);
+        }
+
+        function sendPuzzle() {
+            const checks = document.querySelectorAll('.puzzle-check:checked');
+            if (checks.length === 0) return;
+            const selected = Array.from(checks).map(c => appData.globalCards[parseInt(c.value)]);
+            const text = selected.join('');
+            if (!currentChatId) return;
+            if (!appData.chats[currentChatId]) appData.chats[currentChatId] = { messages: [], unread: 0 };
+            appData.chats[currentChatId].messages.push({
+                from: 'me', type: 'text', content: text, time: Date.now()
+            });
+            saveData();
+            renderMessages();
+            renderChatList();
+            closeBottomSheet();
+        }
+
+        function showChatMenu() {
+            let html = '<div class="sheet-item" onclick="showSubPage('word-cards')">字卡管理</div>';
+            html += '<div class="sheet-item" onclick="showSubPage('emojis')">表情管理</div>';
+            html += '<div class="sheet-item" onclick="showSubPage('pat-pat')">拍一拍管理</div>';
+            html += '<div class="sheet-item" onclick="archiveChat()">存档聊天</div>';
+            html += '<div class="sheet-item danger" onclick="deleteChat()">删除聊天</div>';
+            showBottomSheet(html);
+        }
+
+        function archiveChat() {
+            if (!currentChatId) return;
+            const chat = appData.chats[currentChatId];
+            if (chat) {
+                appData.archives.push({ friendId: currentChatId, messages: chat.messages, time: Date.now() });
+                saveData();
+                showToast('已存档');
+            }
+            closeBottomSheet();
+        }
+
+        function deleteChat() {
+            if (!currentChatId) return;
+            delete appData.chats[currentChatId];
+            saveData();
+            closeChat();
+            renderChatList();
+            showToast('已删除');
+            closeBottomSheet();
+        }
+
+        // ==================== 子页面 ====================
+        function showSubPage(name) {
+            currentSubPage = name;
+            document.querySelectorAll('.sub-page').forEach(p => p.classList.remove('active'));
+            const page = document.getElementById('sub-page-' + name);
+            if (page) page.classList.add('active');
+
+            if (name === 'word-cards') renderWordCards();
+            if (name === 'emojis') renderEmojis();
+            if (name === 'pat-pat') renderPats();
+            if (name === 'mood-book') renderMoods();
+            if (name === 'reply-mgmt') renderReplies();
+            if (name === 'mailbox') renderMailbox();
+        }
+
+        function closeSubPage() {
+            document.querySelectorAll('.sub-page').forEach(p => p.classList.remove('active'));
+            currentSubPage = null;
+        }
+
+        // ==================== 字卡管理 ====================
+        function renderWordCards() {
+            const list = document.getElementById('word-cards-list');
+            if (!list) return;
+            let html = '';
+            appData.globalCards.forEach((card, idx) => {
+                html += '<div class="card-item">' +
+                    '<span class="card-text">' + card + '</span>' +
+                    '<div class="card-actions">' +
+                        '<span class="card-action" onclick="editCard(' + idx + ')">✏️</span>' +
+                        '<span class="card-action" onclick="deleteCard(' + idx + ')">🗑️</span>' +
+                    '</div>' +
+                '</div>';
+            });
+            list.innerHTML = html;
+        }
+
+        function showAddCard() {
+            const text = prompt('输入字卡内容：');
+            if (text && text.trim()) {
+                appData.globalCards.push(text.trim());
+                saveData();
+                renderWordCards();
+                showToast('已添加');
+            }
+        }
+
+        function editCard(idx) {
+            const text = prompt('编辑字卡：', appData.globalCards[idx]);
+            if (text !== null) {
+                appData.globalCards[idx] = text.trim();
+                saveData();
+                renderWordCards();
+            }
+        }
+
+        function deleteCard(idx) {
+            if (confirm('确定删除？')) {
+                appData.globalCards.splice(idx, 1);
+                saveData();
+                renderWordCards();
+            }
+        }
+
+        // ==================== 表情管理 ====================
+        function renderEmojis() {
+            const list = document.getElementById('emojis-list');
+            if (!list) return;
+            let html = '';
+            appData.globalEmojis.forEach((emoji, idx) => {
+                html += '<div class="card-item">' +
+                    '<span class="card-text">' + emoji + '</span>' +
+                    '<div class="card-actions">' +
+                        '<span class="card-action" onclick="deleteEmoji(' + idx + ')">🗑️</span>' +
+                    '</div>' +
+                '</div>';
+            });
+            list.innerHTML = html;
+        }
+
+        function showAddEmoji() {
+            const emoji = prompt('输入表情：');
+            if (emoji && emoji.trim()) {
+                appData.globalEmojis.push(emoji.trim());
+                saveData();
+                renderEmojis();
+            }
+        }
+
+        function deleteEmoji(idx) {
+            appData.globalEmojis.splice(idx, 1);
+            saveData();
+            renderEmojis();
+        }
+
+        // ==================== 拍一拍管理 ====================
+        function renderPats() {
+            const list = document.getElementById('pat-list');
+            if (!list) return;
+            let html = '';
+            appData.globalPats.forEach((pat, idx) => {
+                html += '<div class="card-item">' +
+                    '<span class="card-text">' + pat + '</span>' +
+                    '<div class="card-actions">' +
+                        '<span class="card-action" onclick="deletePat(' + idx + ')">🗑️</span>' +
+                    '</div>' +
+                '</div>';
+            });
+            list.innerHTML = html;
+        }
+
+        function showAddPat() {
+            const pat = prompt('输入拍一拍内容：');
+            if (pat && pat.trim()) {
+                appData.globalPats.push(pat.trim());
+                saveData();
+                renderPats();
+            }
+        }
+
+        function deletePat(idx) {
+            appData.globalPats.splice(idx, 1);
+            saveData();
+            renderPats();
+        }
+
+        // ==================== 心事簿 ====================
+        function renderMoods() {
+            const list = document.getElementById('mood-list');
+            if (!list) return;
+            let html = '';
+            appData.moodCards.forEach((mood, idx) => {
+                html += '<div class="card-item">' +
+                    '<span class="card-text">' + mood + '</span>' +
+                    '<div class="card-actions">' +
+                        '<span class="card-action" onclick="deleteMood(' + idx + ')">🗑️</span>' +
+                    '</div>' +
+                '</div>';
+            });
+            list.innerHTML = html;
+        }
+
+        function showAddMood() {
+            const mood = prompt('输入心情：');
+            if (mood && mood.trim()) {
+                appData.moodCards.push(mood.trim());
+                saveData();
+                renderMoods();
+            }
+        }
+
+        function deleteMood(idx) {
+            appData.moodCards.splice(idx, 1);
+            saveData();
+            renderMoods();
+        }
+
+        // ==================== 回复管理 ====================
+        function renderReplies() {
+            const list = document.getElementById('reply-list');
+            if (!list) return;
+            let html = '';
+            appData.replyManagement.forEach((reply, idx) => {
+                html += '<div class="card-item">' +
+                    '<span class="card-text">' + reply + '</span>' +
+                    '<div class="card-actions">' +
+                        '<span class="card-action" onclick="deleteReply(' + idx + ')">🗑️</span>' +
+                    '</div>' +
+                '</div>';
+            });
+            list.innerHTML = html;
+        }
+
+        function showAddReply() {
+            const reply = prompt('输入回复内容：');
+            if (reply && reply.trim()) {
+                appData.replyManagement.push(reply.trim());
+                saveData();
+                renderReplies();
+            }
+        }
+
+        function deleteReply(idx) {
+            appData.replyManagement.splice(idx, 1);
+            saveData();
+            renderReplies();
+        }
+
+        // ==================== 朋友圈 ====================
+        function renderMoments() {
+            const list = document.getElementById('moments-list');
+            if (!list) return;
+            const allMoments = [...appData.moments, ...appData.myMoments].sort((a, b) => b.id - a.id);
+            let html = '';
+            allMoments.forEach(moment => {
+                html += '<div class="moment-item">' +
+                    '<div class="moment-header">' +
+                        '<div class="moment-avatar">' + moment.avatar + '</div>' +
+                        '<div class="moment-user">' + moment.user + '</div>' +
+                    '</div>' +
+                    '<div class="moment-content">' + moment.content + '</div>' +
+                    '<div class="moment-actions">' +
+                        '<span class="moment-action ' + (moment.liked ? 'active' : '') + '" onclick="likeMoment(' + moment.id + ')">' +
+                            (moment.liked ? '❤️' : '🤍') + ' ' + moment.likes +
+                        '</span>' +
+                        '<span class="moment-action" onclick="commentMoment(' + moment.id + ')">💬</span>' +
+                        '<span class="moment-action" onclick="collectMoment(' + moment.id + ')">⭐</span>' +
+                    '</div>' +
+                '</div>';
+            });
+            list.innerHTML = html;
+        }
+
+        function showPublishMoment() {
+            const content = prompt('发布动态：');
+            if (content && content.trim()) {
+                const moment = {
+                    id: Date.now(),
+                    user: appData.myProfile.name,
+                    avatar: appData.myProfile.avatar,
+                    content: content.trim(),
+                    time: '刚刚',
+                    likes: 0,
+                    liked: false,
+                    comments: []
+                };
+                appData.myMoments.unshift(moment);
+                appData.moments.unshift(moment);
+                saveData();
+                renderMoments();
+                showToast('发布成功');
+            }
+        }
+
+        function likeMoment(id) {
+            const moment = appData.moments.find(m => m.id === id) || appData.myMoments.find(m => m.id === id);
+            if (moment) {
+                moment.liked = !moment.liked;
+                moment.likes += moment.liked ? 1 : -1;
+                saveData();
+                renderMoments();
+            }
+        }
+
+        function commentMoment(id) {
+            const comment = prompt('评论：');
+            if (comment && comment.trim()) {
+                const moment = appData.moments.find(m => m.id === id) || appData.myMoments.find(m => m.id === id);
+                if (moment) {
+                    moment.comments.push({ user: '我', content: comment.trim() });
+                    saveData();
+                    showToast('评论成功');
+                }
+            }
+        }
+
+        function collectMoment(id) {
+            const moment = appData.moments.find(m => m.id === id) || appData.myMoments.find(m => m.id === id);
+            if (moment) {
+                appData.collections.push(moment);
+                saveData();
+                showToast('已收藏');
+            }
+        }
+
+        // ==================== 日记 ====================
+        function renderDiaries() {
+            const list = document.getElementById('diary-list');
+            if (!list) return;
+            let html = '';
+            appData.diaries.forEach(diary => {
+                html += '<div class="diary-item">' +
+                    '<div class="diary-date">' + diary.date + '</div>' +
+                    '<div class="diary-content">' + diary.content + '</div>' +
+                    '<div class="diary-actions">' +
+                        '<span class="diary-action ' + (diary.liked ? 'active' : '') + '" onclick="likeDiary(' + diary.id + ')">' +
+                            (diary.liked ? '❤️' : '🤍') + ' ' + diary.likes +
+                        '</span>' +
+                        '<span class="diary-action" onclick="commentDiary(' + diary.id + ')">💬</span>' +
+                        '<span class="diary-action" onclick="noteDiary(' + diary.id + ')">📝</span>' +
+                    '</div>' +
+                '</div>';
+            });
+            list.innerHTML = html;
+        }
+
+        function showWriteDiary() {
+            const content = prompt('写日记：');
+            if (content && content.trim()) {
+                const diary = {
+                    id: Date.now(),
+                    content: content.trim(),
+                    date: new Date().toISOString().split('T')[0],
+                    likes: 0,
+                    liked: false,
+                    comments: [],
+                    notes: []
+                };
+                appData.diaries.unshift(diary);
+                saveData();
+                renderDiaries();
+                showToast('已保存');
+            }
+        }
+
+        function likeDiary(id) {
+            const diary = appData.diaries.find(d => d.id === id);
+            if (diary) {
+                diary.liked = !diary.liked;
+                diary.likes += diary.liked ? 1 : -1;
+                saveData();
+                renderDiaries();
+            }
+        }
+
+        function commentDiary(id) {
+            const comment = prompt('评论：');
+            if (comment && comment.trim()) {
+                const diary = appData.diaries.find(d => d.id === id);
+                if (diary) {
+                    diary.comments.push({ user: '我', content: comment.trim() });
+                    saveData();
+                    showToast('评论成功');
+                }
+            }
+        }
+
+        function noteDiary(id) {
+            const note = prompt('小纸条：');
+            if (note && note.trim()) {
+                const diary = appData.diaries.find(d => d.id === id);
+                if (diary) {
+                    diary.notes.push(note.trim());
+                    saveData();
+                    showToast('已添加小纸条');
+                }
+            }
+        }
+
+        // ==================== 外观设置 ====================
+        function changeBg(color) {
+            appData.settings.appearance.globalBg = color;
+            saveData();
+            applyAppearance();
+        }
+
+        function changeFontSize(size) {
+            appData.settings.appearance.fontSize = parseInt(size);
+            saveData();
+            applyAppearance();
+        }
+
+        function changeBubbleSize(size) {
+            appData.settings.appearance.bubbleSize = parseFloat(size);
+            saveData();
+            applyAppearance();
+        }
+
+        function applyAppearance() {
+            const s = appData.settings.appearance;
+            if (s.globalBg) document.body.style.background = s.globalBg;
+            document.documentElement.style.fontSize = s.fontSize + 'px';
+        }
+
+        function renderSettings() {
+            // Settings are rendered statically in HTML
+        }
+
+        // ==================== 信箱 ====================
+        function renderMailbox() {
+            const list = document.getElementById('mailbox-list');
+            if (!list) return;
+            let html = '';
+            appData.letters.forEach(letter => {
+                html += '<div class="card-item">' +
+                    '<span class="card-text">' + letter.content + '</span>' +
+                '</div>';
+            });
+            if (html === '') html = '<div style="text-align:center;color:var(--text2);padding:40px;">暂无信件</div>';
+            list.innerHTML = html;
+        }
+
+        // ==================== 数据管理 ====================
+        function exportData() {
+            const data = JSON.stringify(appData, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'entwine_backup_' + new Date().toISOString().split('T')[0] + '.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('已导出');
+        }
+
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        appData = Object.assign(getDefaultData(), data);
+                        saveData();
+                        showToast('导入成功');
+                        initApp();
+                    } catch(err) {
+                        showToast('导入失败');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        function clearAllData() {
+            if (confirm('确定清除所有数据？此操作不可恢复！')) {
+                localStorage.removeItem(DB_KEY);
+                appData = getDefaultData();
+                showToast('已清除');
+                location.reload();
+            }
+        }
+
+        // ==================== 底部弹出 ====================
+        function showBottomSheet(html) {
+            document.getElementById('bottom-sheet').innerHTML = html;
+            document.getElementById('bottom-sheet').classList.add('active');
+            document.getElementById('overlay').classList.add('active');
+        }
+
+        function closeBottomSheet() {
+            document.getElementById('bottom-sheet').classList.remove('active');
+            document.getElementById('overlay').classList.remove('active');
+        }
+
+        // ==================== Toast ====================
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 2000);
+        }
+
+        // ==================== 添加好友 ====================
+        function showAddFriend() {
+            const name = prompt('好友名称：');
+            if (name && name.trim()) {
+                const friend = {
+                    id: 'f' + Date.now(),
+                    name: name.trim(),
+                    avatar: '👤'
+                };
+                appData.friends.push(friend);
+                saveData();
+                renderChatList();
+                showToast('已添加');
+            }
+        }
+    </script>
+</body>
+</html>
